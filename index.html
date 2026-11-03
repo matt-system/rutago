@@ -5,8 +5,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#f3f2ed">
+<meta name="application-name" content="RutaGo">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="RutaGo">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" sizes="64x64" href="./icons/favicon.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <meta name="description" content="RutaGo — Planificación y seguimiento inteligente de rutas.">
-<title>RutaGo — Route Management</title>
+<title>RutaGo — Gestión inteligente de rutas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -140,10 +148,34 @@ th{color:#98a198;font-size:9px;letter-spacing:1px}
 .metric{padding:9px}.metric b{font-size:16px}.address-row .btn{padding:10px}
 .member-row{align-items:flex-start}
 }
+
+/* PWA: instalación, estado de conexión y pantalla de bienvenida */
+.pwa-splash{position:fixed;inset:0;z-index:9999;background:#f3f2ed;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;transition:opacity .35s ease,visibility .35s ease}
+.pwa-splash.hide{opacity:0;visibility:hidden;pointer-events:none}
+.pwa-splash-mark{width:76px;height:76px;border-radius:23px;background:#2b3c33;display:grid;place-items:center;color:#a0c297;font:800 30px Manrope;box-shadow:0 12px 35px #2b3c3325}
+.pwa-splash-name{font:800 28px Manrope;letter-spacing:-1.3px;color:#34443b}.pwa-splash-name span{color:#78977d}
+.pwa-splash-caption{font-size:10px;letter-spacing:2px;color:#87918b;font-weight:800}
+.pwa-tools{position:fixed;right:14px;bottom:14px;z-index:80;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 28px)}
+.pwa-status{border:1px solid #e0e5df;background:#fff;color:#607266;border-radius:30px;padding:8px 11px;font-size:10px;font-weight:700;box-shadow:0 3px 15px #25312e12}
+.pwa-status.offline{color:#9a6d3e;background:#fffaf2;border-color:#eadcc9}
+.pwa-status.online{color:#526f59}
+.pwa-install{border:0;background:#526f59;color:white;border-radius:30px;padding:9px 13px;font-size:10px;font-weight:800;box-shadow:0 3px 15px #25312e20}
+.pwa-panel{position:fixed;inset:0;z-index:500;background:#17221dcc;display:none;align-items:center;justify-content:center;padding:20px}
+.pwa-panel.open{display:flex}
+.pwa-panel-card{background:#fff;border:1px solid #e6e7e1;border-radius:20px;padding:23px;max-width:410px;width:100%;box-shadow:0 20px 60px #0003;color:#34443b}
+.pwa-panel-card h2{font:800 20px Manrope;margin:0 0 8px}.pwa-panel-card p,.pwa-panel-card li{font-size:12px;line-height:1.65;color:#69776e}
+.pwa-panel-card ol{padding-left:20px}.pwa-panel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}
+.pwa-update{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:90;background:#34483b;color:#fff;padding:11px 14px;border-radius:13px;display:none;align-items:center;gap:12px;box-shadow:0 8px 30px #0003;font-size:11px;max-width:calc(100vw - 28px)}
+.pwa-update.show{display:flex}.pwa-update button{border:0;border-radius:8px;background:#dcebd8;color:#34483b;padding:8px 10px;font-weight:800;font-size:10px;white-space:nowrap}
+.address-row{flex-wrap:wrap}.address-row #stopAddress{min-width:140px}
+@media(max-width:600px){.pwa-tools{right:9px;bottom:9px}.pwa-status{font-size:9px;padding:7px 9px}.pwa-install{padding:8px 10px}.pwa-update{bottom:66px}}
+@media(display-mode:standalone){.pwa-tools{bottom:calc(12px + env(safe-area-inset-bottom))}.app{min-height:100dvh}}
+
 </style>
 </head>
 
 <body>
+<div class="pwa-splash" id="pwaSplash" aria-label="Iniciando RutaGo"><div class="pwa-splash-mark">R</div><div class="pwa-splash-name">Ruta<span>Go</span></div><div class="pwa-splash-caption">GESTIÓN INTELIGENTE DE RUTAS</div></div>
 <div class="app">
 <aside class="sidebar">
   <div class="brand">Ruta<span>Go</span><small>SMART ROUTE MANAGEMENT</small></div>
@@ -213,7 +245,7 @@ th{color:#98a198;font-size:9px;letter-spacing:1px}
       <div class="card">
         <h3 class="panel-title section-heading">Añadir direcciones</h3>
         <div class="field"><label>DIRECCIÓN DE LA PARADA</label>
-          <div class="address-row"><input id="stopAddress" placeholder="Ej. Av. Libertad 100, Viña del Mar" onkeydown="if(event.key==='Enter')addStop()"><button class="btn primary" id="addStopBtn" onclick="addStop()">Añadir</button></div>
+          <div class="address-row"><input id="stopAddress" placeholder="Ej. Av. Libertad 100, Viña del Mar" onkeydown="if(event.key==='Enter')addStop()"><button class="btn primary" id="addStopBtn" onclick="addStop()">Añadir</button><button class="btn" id="gpsPinBtn" type="button" onclick="addCurrentLocationStop()" title="Guardar tu ubicación actual incluso sin internet">⌖ Mi ubicación</button></div>
         </div>
         <p class="notice">Introduce una dirección con comuna o ciudad. RutaGo localizará cada punto en el mapa.</p>
       </div>
@@ -285,6 +317,9 @@ th{color:#98a198;font-size:9px;letter-spacing:1px}
 </main>
 </div>
 <div class="toast" id="toast"></div>
+<div class="pwa-tools"><span class="pwa-status online" id="pwaStatus">● Conectado</span><button class="pwa-install" id="pwaInstallBtn" type="button">Instalar RutaGo</button></div>
+<div class="pwa-panel" id="pwaHelp" role="dialog" aria-modal="true" aria-labelledby="pwaHelpTitle"><div class="pwa-panel-card"><h2 id="pwaHelpTitle">Instala RutaGo</h2><p>Agrega RutaGo a la pantalla de inicio para abrirla como una aplicación, con más espacio y sin la barra habitual del navegador.</p><div id="pwaInstallInstructions"><b>Android (Chrome)</b><ol><li>Abre RutaGo en Chrome.</li><li>Toca «Instalar RutaGo» o el menú ⋮.</li><li>Elige «Instalar aplicación» o «Añadir a pantalla de inicio».</li></ol><b>iPhone (Safari)</b><ol><li>Abre esta página en Safari.</li><li>Toca el botón Compartir.</li><li>Selecciona «Añadir a pantalla de inicio» y confirma.</li></ol></div><div class="pwa-panel-actions"><button class="btn primary" type="button" onclick="closePwaHelp()">Entendido</button></div></div></div>
+<div class="pwa-update" id="pwaUpdateNotice"><span>Hay una actualización de RutaGo disponible.</span><button type="button" id="pwaUpdateBtn">Actualizar ahora</button></div>
 
 <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
 <script>
@@ -871,6 +906,61 @@ function restoreTracking(){
   document.getElementById('trackingNote').textContent='Había un seguimiento en curso. Por seguridad se ha recuperado pausado. Pulsa «Reanudar seguimiento» para volver a activar el GPS.';
 }
 
+/* UBICACIÓN ACTUAL: permite guardar una parada GPS sin conexión */
+function addCurrentLocationStop(){
+  if(tracking.active)return toast('Finaliza el seguimiento antes de modificar las paradas.');
+  if(!navigator.geolocation)return toast('Este dispositivo no permite obtener la ubicación.');
+  const btn=document.getElementById('gpsPinBtn');btn.disabled=true;btn.textContent='Localizando…';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat=Number(pos.coords.latitude),lng=Number(pos.coords.longitude);
+    const label='Ubicación guardada · '+new Date().toLocaleString('es-CL');
+    stops.push({id:uid(),name:'Mi ubicación',address:label,formattedAddress:label,lat,lng,serviceMinutes:10,manual:true});
+    saveData();clearRouteDisplay();renderStops();updateDashboard();if(mapReady)plotStops();
+    btn.disabled=false;btn.textContent='⌖ Mi ubicación';toast('Ubicación guardada en este dispositivo.');
+  },err=>{btn.disabled=false;btn.textContent='⌖ Mi ubicación';toast(err.code===1?'Permite el acceso a tu ubicación para guardar el punto.':'No pudimos obtener el GPS. Comprueba los permisos y vuelve a intentarlo.');},{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
+}
+
+/* INSTALACIÓN PWA, CONEXIÓN Y ACTUALIZACIONES */
+let deferredInstallPrompt=null,activeRegistration=null,refreshAfterControllerChange=false;
+function closePwaHelp(){document.getElementById('pwaHelp').classList.remove('open')}
+function openPwaHelp(){document.getElementById('pwaHelp').classList.add('open')}
+function updatePwaConnection(){
+  const el=document.getElementById('pwaStatus');if(!el)return;
+  const online=navigator.onLine;el.textContent=online?'● Conectado':'● Sin conexión';el.classList.toggle('offline',!online);el.classList.toggle('online',online);
+}
+async function handlePwaInstall(){
+  if(deferredInstallPrompt){deferredInstallPrompt.prompt();const result=await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;document.getElementById('pwaInstallBtn').style.display='none';if(result&&result.outcome==='accepted')toast('RutaGo se está instalando.');return;}
+  openPwaHelp();
+}
+function showPwaUpdate(){document.getElementById('pwaUpdateNotice').classList.add('show')}
+function registerRutaGoPwa(){
+  const installBtn=document.getElementById('pwaInstallBtn');installBtn.addEventListener('click',handlePwaInstall);
+  document.getElementById('pwaHelp').addEventListener('click',e=>{if(e.target.id==='pwaHelp')closePwaHelp()});
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;installBtn.style.display='inline-block'});
+  window.addEventListener('appinstalled',()=>{installBtn.style.display='none';toast('RutaGo quedó instalada en tu dispositivo.')});
+  window.addEventListener('online',updatePwaConnection);window.addEventListener('offline',updatePwaConnection);updatePwaConnection();
+  if('serviceWorker' in navigator && location.protocol==='https:'){
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{if(refreshAfterControllerChange)location.reload()});
+    navigator.serviceWorker.register('./sw.js',{scope:'./'}).then(reg=>{
+      activeRegistration=reg;
+      if(reg.waiting)showPwaUpdate();
+      reg.addEventListener('updatefound',()=>{
+        const worker=reg.installing;if(!worker)return;
+        worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)showPwaUpdate()});
+      });
+      document.getElementById('pwaUpdateBtn').addEventListener('click',()=>{
+        const waiting=reg.waiting;if(!waiting){reg.update();toast('Buscando una actualización…');return;}
+        refreshAfterControllerChange=true;waiting.postMessage({type:'SKIP_WAITING'});
+      });
+      // Comprueba nuevas versiones al volver a abrir RutaGo.
+      window.addEventListener('focus',()=>reg.update().catch(()=>{}));
+    }).catch(err=>console.warn('No se pudo registrar el modo offline:',err));
+  }else if(location.protocol!=='https:'&&location.hostname!=='localhost'){
+    console.warn('La instalación PWA requiere HTTPS.');
+  }
+  window.setTimeout(()=>document.getElementById('pwaSplash')?.classList.add('hide'),650);
+}
+
 /* INICIO */
 renderTrips();
 renderTeam();
@@ -880,6 +970,7 @@ updateDashboard();
 initMap();
 restoreTracking();
 updateTrackingUI();
+registerRutaGoPwa();
 </script>
 </body>
 </html>
