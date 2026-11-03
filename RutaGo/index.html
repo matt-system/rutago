@@ -1,0 +1,885 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f3f2ed">
+<meta name="description" content="RutaGo — Planificación y seguimiento inteligente de rutas.">
+<title>RutaGo — Route Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" rel="stylesheet">
+
+<style>
+:root{--bg:#f3f2ed;--side:#faf9f6;--panel:#fff;--panel2:#f4f5f1;--border:#e6e7e1;--green:#78977d;--green-dark:#526f59;--green-soft:#e9f0e8;--white:#25312e;--muted:#87918b;--red:#c66f68;--blue:#718da1;--blue-soft:#eaf0f4;--orange:#b58a58;--shadow:0 5px 24px rgba(39,53,46,.045);--radius:17px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--white);font-family:'DM Sans',sans-serif}
+button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.42;cursor:not-allowed}
+.app{min-height:100vh;display:flex}
+.sidebar{width:250px;background:var(--side);border-right:1px solid var(--border);padding:27px 17px;display:flex;flex-direction:column;flex-shrink:0}
+.brand{font:800 29px 'Manrope';padding:0 12px 34px;letter-spacing:-1.6px;color:#34443b}
+.brand span{color:var(--green)}.brand small{display:block;font:700 9px 'DM Sans';letter-spacing:2px;color:#a1aaa2;margin-top:5px}
+.nav-label{font-size:9px;color:#a2aaa3;font-weight:800;letter-spacing:1.7px;padding:12px}
+.nav button{width:100%;border:1px solid transparent;background:transparent;color:#7f8982;text-align:left;padding:13px;border-radius:11px;margin:3px 0;font-weight:600;font-size:12px;transition:.2s}
+.nav button.active,.nav button:hover{background:var(--green-soft);color:var(--green-dark);border-color:#dce8dc}
+.nav button .nav-icon{display:inline-block;width:27px;font-size:16px}
+.side-bottom{margin-top:auto;padding:15px 12px;color:#9aa39c;font-size:10px;line-height:1.8}
+.side-indicator{display:inline-block;width:7px;height:7px;background:#86a68a;border-radius:50%;margin-right:7px}
+.main{flex:1;min-width:0}
+.topbar{height:75px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 36px;background:rgba(250,249,246,.91);position:sticky;top:0;z-index:10;backdrop-filter:blur(16px)}
+.topbar h1{font:700 19px 'Manrope';margin:0;letter-spacing:-.4px}
+.profile{color:#8a948c;font-size:11px;display:flex;align-items:center;gap:10px}
+.profile-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:12px;background:#e8eee6;color:var(--green-dark);font-weight:800}
+.content{padding:31px 36px;max-width:1600px;margin:auto}
+.section{display:none}.section.active{display:block;animation:appear .25s ease}
+@keyframes appear{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.welcome{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;gap:15px}
+.welcome h2{font:700 27px 'Manrope';margin:0 0 7px;letter-spacing:-1px;color:#34443b}
+.muted{color:var(--muted)}.small{font-size:11px}
+.eyebrow{font-size:9px;letter-spacing:1.8px;font-weight:800;color:var(--green-dark);margin-bottom:9px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:22px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:21px;box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s}
+.card:hover{border-color:#d8ded6;box-shadow:0 8px 28px rgba(39,53,46,.065)}
+.stat-card{position:relative;overflow:hidden;min-height:128px}
+.stat-card:after{content:"";position:absolute;width:90px;height:90px;border-radius:50%;background:rgba(120,151,125,.09);right:-28px;bottom:-37px}
+.stat-label{color:#929c94;font-size:9px;font-weight:800;letter-spacing:1.2px}
+.stat-value{font:800 32px 'Manrope';margin-top:13px;letter-spacing:-1.2px;color:#394a40}
+.stat-foot{font-size:10px;color:#a1aaa3;margin-top:5px}
+.panel-title{font:700 16px 'Manrope';margin:0 0 17px;color:#39483f}
+.btn{border:1px solid #e0e5df;background:#f7f8f5;color:#526157;padding:10px 15px;border-radius:10px;font-weight:700;font-size:11px;transition:.2s}
+.btn:hover:not(:disabled){border-color:#b8c9b9;background:#eff4ee;transform:translateY(-1px)}
+.btn.primary{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+.btn.primary:hover:not(:disabled){background:#627e67}
+.btn.danger{color:var(--red);background:#fffafa;border-color:#f0e2df}.btn.ghost{background:transparent}
+.field{display:flex;flex-direction:column;gap:7px;min-width:0}
+.field label{font-size:9px;color:#929c94;font-weight:800;letter-spacing:.8px}
+.field input,.field select{width:100%;background:#fbfcfa;color:#34443b;border:1px solid #e1e6df;padding:12px;border-radius:10px;outline:none;min-width:0;font-size:12px}
+.field input:focus,.field select:focus{border-color:#8ba88e;box-shadow:0 0 0 3px rgba(120,151,125,.12)}
+.form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.form-card{margin-bottom:20px}.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:550px}
+th,td{text-align:left;padding:14px 12px;border-bottom:1px solid #edf0eb;font-size:11px}
+th{color:#98a198;font-size:9px;letter-spacing:1px}
+.status{display:inline-block;border-radius:30px;padding:5px 10px;font-size:9px;font-weight:800;background:#eaf1e9;color:#617e65}
+.status.done{background:#eaf0f4;color:#718da1}
+.empty{padding:25px;text-align:center;color:#9ba49d;font-size:11px;line-height:1.7}
+.planner-layout{display:grid;grid-template-columns:minmax(310px,405px) minmax(0,1fr);gap:19px;align-items:stretch}
+.planner-left{display:flex;flex-direction:column;gap:14px;min-width:0}
+.address-row{display:flex;gap:8px}.address-row input{flex:1;min-width:0}
+.stop-list{display:flex;flex-direction:column;gap:8px}
+.stop-item{display:flex;align-items:center;gap:8px;padding:11px;background:#fafbf9;border:1px solid #e9ede7;border-radius:11px;transition:.2s}
+.stop-item:hover{border-color:#c8d7c8}
+.stop-number{width:27px;height:27px;display:grid;place-items:center;background:#e7efe6;color:#5f8065;border-radius:50%;font-weight:800;font-size:10px;flex-shrink:0}
+.stop-number.origin{background:#e8eff3;color:#6d8799}
+.stop-name{flex:1;min-width:0;font-size:10px;overflow-wrap:anywhere;line-height:1.4;color:#526157}
+.stop-sub{font-size:8px;color:#9ba59c;margin-top:4px;letter-spacing:.4px}
+.stop-service{width:58px!important;padding:7px!important;font-size:10px!important}
+.stop-controls{display:flex;gap:1px}.mini{border:0;background:transparent;color:#9aa49c;padding:5px;font-size:14px}
+.mini:hover:not(:disabled){color:var(--green-dark)}
+.pill{font-size:8px;font-weight:800;letter-spacing:.8px;color:#648068;background:#edf3eb;padding:7px 10px;border-radius:30px;white-space:nowrap}
+.notice{font-size:9px;color:#9ba49d;line-height:1.7;margin:12px 0 0}
+.route-order{font-size:10px;color:#59685e;line-height:2;overflow-wrap:anywhere}
+.map-card{padding:0;overflow:hidden;min-height:600px;display:flex;flex-direction:column}
+.map-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff}
+.map-head h3{font:700 15px 'Manrope';margin:0;color:#39483f}
+.map-status{font-size:9px;color:#9ba49d;margin-top:5px}
+#map{width:100%;flex:1;min-height:480px;background:#e9ede7;position:relative}
+#map .maplibregl-ctrl-group{background:#fff;border:1px solid #e2e7e0;box-shadow:0 2px 9px #0000000d}
+#map .maplibregl-ctrl-group button{background-color:#fff}
+#map .maplibregl-ctrl-attrib{background:rgba(255,255,255,.88);color:#59685e}
+#map .maplibregl-ctrl-attrib a{color:#617e65}
+.route-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:14px;border-top:1px solid var(--border);background:#fff}
+.metric{background:#f6f8f4;padding:12px;border-radius:10px;min-width:0}
+.metric b{display:block;font:800 18px 'Manrope';color:#5d7e64}
+.metric span{font-size:8px;color:#99a299;letter-spacing:.7px}
+.tracking-card{border-color:#dce6db;background:linear-gradient(145deg,#f4f8f2,#fff)}
+.tracking-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tracking-status{display:flex;align-items:center;gap:9px;font-weight:700;font-size:11px;margin-top:15px;color:#536258}
+.live-dot{width:9px;height:9px;border-radius:50%;background:#bdc5bd;display:inline-block;flex-shrink:0}
+.live-dot.on{background:#789e7c;box-shadow:0 0 0 4px rgba(120,158,124,.14);animation:pulse 1.8s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 2px rgba(120,158,124,.08)}}
+.tracking-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:16px}
+.tracking-cell{background:rgba(255,255,255,.82);padding:12px;border:1px solid #e8eee6;border-radius:11px;min-width:0}
+.tracking-value{font:800 20px 'Manrope';color:#607f65;margin-top:6px;overflow-wrap:anywhere}
+.tracking-label{font-size:8px;color:#98a298;letter-spacing:.6px;line-height:1.5}
+.tracking-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}
+.tracking-note{font-size:9px;color:#919d93;line-height:1.7;margin-top:12px}
+.tracking-progress{height:5px;border-radius:5px;background:#e5ebe3;margin-top:15px;overflow:hidden}
+.tracking-progress span{display:block;height:100%;width:0;background:#86a58a;transition:width .4s}
+.member-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #edf0eb;gap:10px}
+.toast{position:fixed;bottom:20px;right:20px;background:#526f59;border:1px solid #78977d;color:#fff;padding:13px 17px;border-radius:12px;z-index:9999;display:none;max-width:360px;font-size:11px;box-shadow:0 10px 35px #0002}
+.maplibregl-popup-content{background:#fff;color:#34443b;border-radius:10px;font-family:'DM Sans',sans-serif;box-shadow:0 5px 20px #0002}
+.maplibregl-popup-tip{border-top-color:#fff!important}.maplibregl-popup-close-button{color:#526157;font-size:18px}
+.vehicle-marker{width:37px;height:37px;border-radius:50%;background:#718da1;border:3px solid #fff;display:grid;place-items:center;color:white;font-size:17px;box-shadow:0 0 0 6px rgba(113,141,161,.17),0 5px 15px #0002}
+.section-heading{display:flex;align-items:center;gap:9px}
+.section-heading:before{content:"";width:3px;height:17px;background:#88a58a;border-radius:4px}
+.assignment-card{background:linear-gradient(145deg,#f5f8f3,#fff);border-color:#dfe8dc}
+.assignment-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.assignment-icon{width:34px;height:34px;border-radius:11px;background:#e6eee4;display:grid;place-items:center;color:#638168;font-size:16px}
+.assignment-select{width:100%;background:#fff;color:#34443b;border:1px solid #dfe6dc;padding:13px;border-radius:10px;outline:none;font-size:12px}
+.assignment-select:focus{border-color:#88a58a;box-shadow:0 0 0 3px rgba(120,151,125,.12)}
+.assignment-info{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:10px;color:#8d998f}
+.assignment-avatar{width:27px;height:27px;border-radius:50%;background:#e8eff3;color:#718da1;display:grid;place-items:center;font-weight:800;font-size:10px}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.planner-layout{grid-template-columns:1fr}.map-card{min-height:500px}}
+@media(max-width:680px){
+.app{display:block}.sidebar{width:100%;padding:11px 13px;border-right:0;border-bottom:1px solid var(--border)}
+.brand{padding:3px 7px 10px;font-size:25px}.brand small,.nav-label,.side-bottom{display:none}
+.nav{display:flex;overflow-x:auto;gap:4px;scrollbar-width:none}
+.nav button{white-space:nowrap;padding:9px 10px;font-size:10px;width:auto;flex-shrink:0;margin:0}
+.nav button .nav-icon{width:auto;margin-right:5px}
+.topbar{height:58px;padding:0 15px}.topbar h1{font-size:16px}
+.content{padding:19px 12px}.grid{gap:8px}.card{padding:15px;border-radius:14px}
+.stat-card{min-height:105px}.stat-value{font-size:25px}
+.form-grid{grid-template-columns:1fr}.welcome{align-items:flex-start;flex-direction:column}
+.welcome h2{font-size:23px}.map-card{min-height:450px}#map{min-height:360px}
+.tracking-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tracking-value{font-size:18px}.route-metrics{gap:6px;padding:9px}
+.metric{padding:9px}.metric b{font-size:16px}.address-row .btn{padding:10px}
+.member-row{align-items:flex-start}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand">Ruta<span>Go</span><small>SMART ROUTE MANAGEMENT</small></div>
+  <div class="nav-label">ESPACIO DE TRABAJO</div>
+  <nav class="nav">
+    <button class="active" data-section="resumen" onclick="showSection('resumen')"><span class="nav-icon">▦</span>Resumen</button>
+    <button data-section="operaciones" onclick="showSection('operaciones')"><span class="nav-icon">⇄</span>Operaciones</button>
+    <button data-section="planificador" onclick="showSection('planificador')"><span class="nav-icon">⌖</span>Planificador</button>
+    <button data-section="equipo" onclick="showSection('equipo')"><span class="nav-icon">♙</span>Equipo</button>
+  </nav>
+  <div class="side-bottom"><span class="side-indicator"></span> Sistema operativo<br>Planificación inteligente de rutas.<br>RutaGo · Versión de prueba</div>
+</aside>
+
+<main class="main">
+<header class="topbar">
+  <h1 id="pageTitle">Resumen</h1>
+  <div class="profile"><span class="profile-icon">R</span><span id="profileName">Mi espacio</span></div>
+</header>
+
+<div class="content">
+<section class="section active" id="resumen">
+  <div class="welcome">
+    <div><div class="eyebrow">CENTRO DE CONTROL</div><h2>Tu operación.</h2><div class="muted small">Controla tus operaciones y desplazamientos desde un solo lugar.</div></div>
+    <button class="btn primary" onclick="showSection('planificador')">＋ Planificar ruta</button>
+  </div>
+  <div class="grid">
+    <div class="card stat-card"><div class="stat-label">OPERACIONES TOTALES</div><div class="stat-value" id="statTrips">0</div><div class="stat-foot">Trabajos registrados</div></div>
+    <div class="card stat-card"><div class="stat-label">COMPLETADAS</div><div class="stat-value" id="statDone">0</div><div class="stat-foot">Operaciones finalizadas</div></div>
+    <div class="card stat-card"><div class="stat-label">PARADAS PLANIFICADAS</div><div class="stat-value" id="statStops">0</div><div class="stat-foot">Direcciones en tu ruta</div></div>
+    <div class="card stat-card"><div class="stat-label">PERSONAS EN EL EQUIPO</div><div class="stat-value" id="statTeam">0</div><div class="stat-foot">Conductores y operadores</div></div>
+  </div>
+  <div class="card"><h3 class="panel-title section-heading">Operaciones recientes</h3><div id="recentTrips" class="empty">Todavía no hay operaciones registradas.</div></div>
+</section>
+
+<section class="section" id="operaciones">
+  <div class="welcome"><div><div class="eyebrow">GESTIÓN</div><h2>Operaciones</h2><div class="muted small">Crea y controla tus trabajos y desplazamientos.</div></div></div>
+  <div class="card form-card">
+    <h3 class="panel-title">Nueva operación</h3>
+    <div class="form-grid">
+      <div class="field"><label>NOMBRE / CLIENTE</label><input id="tripName" placeholder="Ej. Entrega cliente Pérez"></div>
+      <div class="field"><label>CONDUCTOR</label><select id="tripDriver"><option value="">Sin asignar</option></select></div>
+      <div class="field"><label>VEHÍCULO</label><input id="tripVehicle" placeholder="Ej. Furgón 1"></div>
+    </div>
+    <div style="margin-top:13px"><button class="btn primary" onclick="addTrip()">＋ Crear operación</button></div>
+  </div>
+  <div class="card"><h3 class="panel-title">Todas las operaciones</h3><div class="table-wrap" id="tripTable"></div></div>
+</section>
+
+<section class="section" id="planificador">
+  <div class="welcome">
+    <div><div class="eyebrow">LOGÍSTICA INTELIGENTE</div><h2>Planificador de rutas</h2><div class="muted small">Organiza el recorrido y controla el viaje desde el GPS.</div></div>
+    <span class="pill">MAPA Y GPS</span>
+  </div>
+  <div class="planner-layout">
+    <div class="planner-left">
+      <div class="card assignment-card">
+        <div class="assignment-heading">
+          <div><h3 class="panel-title" style="margin:0 0 4px">Asignación de ruta</h3><div class="muted small">¿Quién realizará este recorrido?</div></div>
+          <div class="assignment-icon">♙</div>
+        </div>
+        <div class="field"><label>CONDUCTOR RESPONSABLE</label>
+          <select id="routeDriver" class="assignment-select" onchange="setRouteDriver(this.value)"><option value="">Sin asignar</option></select>
+        </div>
+        <div class="assignment-info" id="routeDriverInfo"><span class="assignment-avatar">—</span><span>Selecciona un conductor de tu equipo.</span></div>
+      </div>
+
+      <div class="card">
+        <h3 class="panel-title section-heading">Añadir direcciones</h3>
+        <div class="field"><label>DIRECCIÓN DE LA PARADA</label>
+          <div class="address-row"><input id="stopAddress" placeholder="Ej. Av. Libertad 100, Viña del Mar" onkeydown="if(event.key==='Enter')addStop()"><button class="btn primary" id="addStopBtn" onclick="addStop()">Añadir</button></div>
+        </div>
+        <p class="notice">Introduce una dirección con comuna o ciudad. RutaGo localizará cada punto en el mapa.</p>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 class="panel-title" style="margin:0">Paradas de la ruta</h3><span class="pill" id="stopCount">0 paradas</span></div>
+        <div id="stopList" class="stop-list" style="margin-top:14px"><div class="empty">Añade direcciones para empezar.</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:15px">
+          <button class="btn primary" id="optimizeBtn" onclick="optimizeRoute()">✦ Optimizar ruta</button>
+          <button class="btn" id="clearStopsBtn" onclick="clearStops()">Limpiar</button>
+        </div>
+        <p class="notice">La primera dirección es el origen. Los destinos siguientes se visitan en el orden optimizado. Configura los minutos de servicio de cada destino.</p>
+      </div>
+
+      <div class="card tracking-card">
+        <div class="tracking-top"><h3 class="panel-title" style="margin:0">Seguimiento del viaje</h3><span class="pill" id="trackingBadge">INACTIVO</span></div>
+        <div class="tracking-status"><span class="live-dot" id="gpsDot"></span><span id="trackingStatus">GPS desactivado</span></div>
+        <div class="tracking-progress"><span id="trackingProgress"></span></div>
+        <div class="tracking-grid">
+          <div class="tracking-cell"><div class="tracking-label">HASTA LA PRÓXIMA PARADA</div><div class="tracking-value" id="liveEta">—</div></div>
+          <div class="tracking-cell"><div class="tracking-label">DISTANCIA RESTANTE</div><div class="tracking-value" id="liveDistance">—</div></div>
+          <div class="tracking-cell"><div class="tracking-label">HORA ESTIMADA DE LLEGADA</div><div class="tracking-value" id="liveArrival">—</div></div>
+          <div class="tracking-cell"><div class="tracking-label">DESTINO ACTUAL</div><div class="tracking-value" id="liveStop">—</div></div>
+          <div class="tracking-cell"><div class="tracking-label">TIEMPO EN PARADA</div><div class="tracking-value" id="liveDwell">—</div></div>
+          <div class="tracking-cell"><div class="tracking-label">TIEMPO TOTAL RESTANTE</div><div class="tracking-value" id="liveTotal">—</div></div>
+        </div>
+        <div class="tracking-actions">
+          <button class="btn primary" id="startTrackingBtn" onclick="startTracking()">▶ Iniciar seguimiento GPS</button>
+          <button class="btn" id="pauseTrackingBtn" onclick="pauseTracking()" disabled>Pausar</button>
+          <button class="btn danger" id="stopTrackingBtn" onclick="stopTracking()" disabled>Finalizar viaje</button>
+        </div>
+        <p class="tracking-note" id="trackingNote">Optimiza una ruta con al menos dos direcciones y pulsa «Iniciar seguimiento GPS». Necesitarás autorizar la ubicación del dispositivo.</p>
+      </div>
+
+      <div class="card">
+        <h3 class="panel-title section-heading">Orden recomendado</h3>
+        <div id="routeOrder" class="route-order muted">Optimiza la ruta para ver el orden recomendado.</div>
+        <div style="margin-top:13px"><button class="btn" onclick="openGoogleMaps()" id="openMapsBtn" disabled>↗ Abrir navegación externa</button></div>
+        <p class="notice">La navegación externa se abre en Google Maps. La estimación de RutaGo no incluye tráfico en directo.</p>
+      </div>
+    </div>
+
+    <div class="card map-card">
+      <div class="map-head"><div><h3>Mapa del recorrido</h3><div class="map-status" id="mapStatus">Preparando mapa…</div></div><span class="pill">OPENFREEMAP</span></div>
+      <div id="map"></div>
+      <div class="route-metrics">
+        <div class="metric"><b id="metricDistance">—</b><span>DISTANCIA TOTAL</span></div>
+        <div class="metric"><b id="metricDuration">—</b><span>TIEMPO DE CONDUCCIÓN</span></div>
+        <div class="metric"><b id="metricStops">0</b><span>DIRECCIONES</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="equipo">
+  <div class="welcome"><div><div class="eyebrow">PERSONAS</div><h2>Equipo y conductores</h2><div class="muted small">Organiza las personas de tus operaciones.</div></div></div>
+  <div class="card form-card">
+    <h3 class="panel-title">Añadir integrante</h3>
+    <div class="form-grid">
+      <div class="field"><label>NOMBRE</label><input id="memberName" placeholder="Nombre del conductor"></div>
+      <div class="field"><label>ROL</label><select id="memberRole"><option>Conductor</option><option>Administrador</option><option>Operador</option></select></div>
+      <div class="field"><label>VEHÍCULO</label><input id="memberVehicle" placeholder="Vehículo asignado"></div>
+    </div>
+    <div style="margin-top:13px"><button class="btn primary" onclick="addMember()">＋ Añadir al equipo</button></div>
+  </div>
+  <div class="card"><h3 class="panel-title">Integrantes</h3><div id="teamList" class="empty">Todavía no hay integrantes.</div></div>
+</section>
+</div>
+</main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+<script>
+/* =========================================================
+   RUTAGO — DATOS Y ALMACENAMIENTO
+========================================================= */
+function readStore(key){
+  try{const value=JSON.parse(localStorage.getItem(key)||'null');if(value!==null)return value}catch(e){}
+  return key==='rutago_tracking'?null:[];
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function saveData(){
+  localStorage.setItem('rutago_trips',JSON.stringify(trips));
+  localStorage.setItem('rutago_team',JSON.stringify(team));
+  localStorage.setItem('rutago_stops',JSON.stringify(stops));
+  saveTracking();
+}
+function saveTracking(){localStorage.setItem('rutago_tracking',JSON.stringify(tracking))}
+function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+let trips=readStore('rutago_trips'),team=readStore('rutago_team'),stops=readStore('rutago_stops');
+if(!Array.isArray(trips))trips=[];
+if(!Array.isArray(team))team=[];
+if(!Array.isArray(stops))stops=[];
+stops=stops.map(s=>({...s,serviceMinutes:Number.isFinite(Number(s.serviceMinutes))?Number(s.serviceMinutes):10}));
+
+let tracking=readStore('rutago_tracking');
+if(!tracking||Array.isArray(tracking)||typeof tracking!=='object'){
+  tracking={active:false,paused:false,index:1,arrivedAt:null,arrivalPosition:null,lastPosition:null,position:null};
+}
+tracking={active:false,paused:false,index:1,arrivedAt:null,arrivalPosition:null,lastPosition:null,position:null,...tracking};
+if(tracking.active)tracking.paused=true;
+
+let routeAssignment=readStore('rutago_route_assignment');
+if(!routeAssignment||Array.isArray(routeAssignment)||typeof routeAssignment!=='object')routeAssignment={driverId:'',driverName:''};
+routeAssignment={driverId:routeAssignment.driverId||'',driverName:routeAssignment.driverName||''};
+
+let map=null,mapReady=false,stopMarkers=[],driverMarker=null;
+let routeOptimized=false,lastRouteUrl='',routeRequestBusy=false,watchId=null,trackingTimer=null,nearSince=null,lastMapCenterAt=0;
+let liveRouteRequestId=0;
+
+const ARRIVAL_RADIUS=65,ARRIVAL_CONFIRM_SECONDS=60,DEPARTURE_RADIUS=75,MIN_STOP_SECONDS=30;
+const ROUTE_REFRESH_MS=60000,ROUTE_REFRESH_METERS=250;
+
+function toast(message){
+  const el=document.getElementById('toast');el.textContent=message;el.style.display='block';
+  clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.display='none',3800);
+}
+
+/* ASIGNACIÓN DE CONDUCTOR */
+function saveRouteAssignment(){localStorage.setItem('rutago_route_assignment',JSON.stringify(routeAssignment))}
+function renderRouteDriver(){
+  const select=document.getElementById('routeDriver');if(!select)return;
+  const current=routeAssignment.driverId;
+  const drivers=team.filter(m=>String(m.role||'').toLowerCase()==='conductor'||!m.role);
+  select.innerHTML='<option value="">Sin asignar</option>'+drivers.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}${m.vehicle?' · '+esc(m.vehicle):''}</option>`).join('');
+  if(drivers.some(m=>String(m.id)===String(current)))select.value=current;
+  else{select.value='';routeAssignment={driverId:'',driverName:''};saveRouteAssignment()}
+  updateRouteDriverInfo();
+}
+function setRouteDriver(id){
+  const member=team.find(m=>String(m.id)===String(id));
+  routeAssignment=member?{driverId:String(member.id),driverName:member.name}:{driverId:'',driverName:''};
+  saveRouteAssignment();updateRouteDriverInfo();
+  toast(member?'Ruta asignada a '+member.name+'.':'Ruta sin conductor asignado.');
+}
+function updateRouteDriverInfo(){
+  const el=document.getElementById('routeDriverInfo');if(!el)return;
+  const member=team.find(m=>String(m.id)===String(routeAssignment.driverId));
+  if(!member){el.innerHTML='<span class="assignment-avatar">—</span><span>Selecciona un conductor de tu equipo.</span>';return}
+  el.innerHTML=`<span class="assignment-avatar">${esc((member.name||'?').trim().charAt(0).toUpperCase())}</span><span><b>${esc(member.name)}</b>${member.vehicle?' · '+esc(member.vehicle):' · Sin vehículo asignado'}</span>`;
+}
+
+/* NAVEGACIÓN */
+function showSection(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===id));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
+  const titles={resumen:'Resumen',operaciones:'Operaciones',planificador:'Planificador de rutas',equipo:'Equipo y conductores'};
+  document.getElementById('pageTitle').textContent=titles[id]||'RutaGo';
+  if(id==='planificador'){
+    if(!map)initMap();
+    setTimeout(()=>{if(map){map.resize();if(mapReady){if(!routeOptimized)plotStops();if(tracking.position)addDriverMarker()}}updateTrackingUI()},300);
+  }
+}
+
+/* DASHBOARD Y OPERACIONES */
+function updateDashboard(){
+  document.getElementById('statTrips').textContent=trips.length;
+  document.getElementById('statDone').textContent=trips.filter(t=>t.status==='Completada').length;
+  document.getElementById('statStops').textContent=stops.length;
+  document.getElementById('statTeam').textContent=team.length;
+  const recent=[...trips].slice(-5).reverse();
+  document.getElementById('recentTrips').innerHTML=recent.length?
+    `<div class="table-wrap"><table><thead><tr><th>OPERACIÓN</th><th>CONDUCTOR</th><th>ESTADO</th></tr></thead><tbody>${recent.map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.driver||'Sin asignar')}</td><td><span class="status ${t.status==='Completada'?'done':''}">${esc(t.status)}</span></td></tr>`).join('')}</tbody></table></div>`:
+    '<div class="empty">Todavía no hay operaciones registradas.</div>';
+}
+function renderTrips(){
+  const el=document.getElementById('tripTable');
+  el.innerHTML=trips.length?
+    `<table><thead><tr><th>OPERACIÓN</th><th>CONDUCTOR</th><th>VEHÍCULO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>${[...trips].reverse().map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.driver||'—')}</td><td>${esc(t.vehicle||'—')}</td><td><span class="status ${t.status==='Completada'?'done':''}">${esc(t.status)}</span></td><td><button class="btn" onclick="toggleTrip('${t.id}')">${t.status==='Completada'?'Reabrir':'Completar'}</button> <button class="btn danger" onclick="deleteTrip('${t.id}')">Eliminar</button></td></tr>`).join('')}</tbody></table>`:
+    '<div class="empty">No hay operaciones. Crea la primera arriba.</div>';
+  const select=document.getElementById('tripDriver'),value=select.value;
+  select.innerHTML='<option value="">Sin asignar</option>'+team.map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
+  select.value=value;
+}
+function addTrip(){
+  const name=document.getElementById('tripName').value.trim();if(!name)return toast('Escribe un nombre para la operación.');
+  trips.push({id:uid(),name,driver:document.getElementById('tripDriver').value,vehicle:document.getElementById('tripVehicle').value.trim(),status:'Pendiente',date:new Date().toISOString()});
+  document.getElementById('tripName').value='';document.getElementById('tripVehicle').value='';
+  saveData();renderTrips();updateDashboard();toast('Operación creada.');
+}
+function toggleTrip(id){const t=trips.find(x=>x.id===id);if(t)t.status=t.status==='Completada'?'Pendiente':'Completada';saveData();renderTrips();updateDashboard()}
+function deleteTrip(id){
+  if(!confirm('¿Eliminar esta operación?'))return;
+  trips=trips.filter(t=>t.id!==id);saveData();renderTrips();updateDashboard();
+}
+
+/* EQUIPO */
+function addMember(){
+  const name=document.getElementById('memberName').value.trim();if(!name)return toast('Escribe el nombre del integrante.');
+  team.push({id:uid(),name,role:document.getElementById('memberRole').value,vehicle:document.getElementById('memberVehicle').value.trim()});
+  document.getElementById('memberName').value='';document.getElementById('memberVehicle').value='';
+  saveData();renderTeam();renderTrips();renderRouteDriver();updateDashboard();toast('Integrante añadido.');
+}
+function renderTeam(){
+  const el=document.getElementById('teamList');
+  el.innerHTML=team.length?team.map(m=>`<div class="member-row"><div><b>${esc(m.name)}</b><div class="muted small">${esc(m.vehicle||'Sin vehículo')}</div></div><div style="display:flex;align-items:center;gap:12px"><span class="pill">${esc(m.role)}</span><button class="btn danger" onclick="deleteMember('${m.id}')">Eliminar</button></div></div>`).join(''):'<div class="empty">Todavía no hay integrantes.</div>';
+}
+function deleteMember(id){
+  const member=team.find(m=>String(m.id)===String(id));team=team.filter(m=>String(m.id)!==String(id));
+  if(routeAssignment.driverId===String(id)){routeAssignment={driverId:'',driverName:''};saveRouteAssignment()}
+  saveData();renderTeam();renderTrips();renderRouteDriver();updateDashboard();
+  if(member)toast('Integrante eliminado. Revisa la asignación de la ruta.');
+}
+
+/* MAPA */
+function initMap(){
+  if(map)return;
+  if(typeof maplibregl==='undefined'){document.getElementById('mapStatus').textContent='No se pudo cargar MapLibre.';toast('Error cargando el mapa. Comprueba tu conexión.');return}
+  try{
+    map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[-71.5518,-33.0245],zoom:11,attributionControl:true});
+    map.addControl(new maplibregl.NavigationControl(),'top-right');
+    map.on('load',()=>{mapReady=true;document.getElementById('mapStatus').textContent='Mapa conectado correctamente.';map.resize();plotStops();if(tracking.position)addDriverMarker()});
+    map.on('error',e=>console.warn('MapLibre:',e.error||e));
+  }catch(e){console.error(e);document.getElementById('mapStatus').textContent='No se pudo iniciar el mapa.'}
+}
+function removeStopMarkers(){stopMarkers.forEach(m=>m.remove());stopMarkers=[]}
+function clearRouteLayer(){
+  if(!map||!mapReady)return;
+  if(map.getLayer('route-line'))map.removeLayer('route-line');
+  if(map.getSource('route-source'))map.removeSource('route-source');
+}
+function clearMap(){removeStopMarkers();clearRouteLayer()}
+function resetRouteMetrics(){
+  document.getElementById('metricDistance').textContent='—';
+  document.getElementById('metricDuration').textContent='—';
+  document.getElementById('metricStops').textContent=stops.length;
+}
+function clearRouteDisplay(){
+  routeOptimized=false;lastRouteUrl='';
+  document.getElementById('routeOrder').textContent='Optimiza la ruta para ver el orden recomendado.';
+  resetRouteMetrics();
+  document.getElementById('mapStatus').textContent='Ruta pendiente de calcular.';
+  document.getElementById('openMapsBtn').disabled=true;
+  if(mapReady){clearMap();addStopMarkers()}
+  updateTrackingUI();
+}
+function addStopMarkers(){
+  if(!map||!mapReady)return;
+  stops.forEach((s,i)=>{
+    if(!Number.isFinite(Number(s.lat))||!Number.isFinite(Number(s.lng)))return;
+    const marker=new maplibregl.Marker({color:i===0?'#718da1':'#78977d'})
+      .setLngLat([Number(s.lng),Number(s.lat)])
+      .setPopup(new maplibregl.Popup({offset:25}).setHTML(`<b>${i===0?'Origen':'Destino '+i}</b><br>${esc(s.address||s.name)}`)).addTo(map);
+    stopMarkers.push(marker);
+  });
+}
+function plotStops(){
+  if(!map||!mapReady)return;
+  clearMap();
+  const valid=stops.filter(s=>Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng)));
+  if(!valid.length){map.flyTo({center:[-71.5518,-33.0245],zoom:11});document.getElementById('mapStatus').textContent='Añade direcciones para visualizar el mapa.';return}
+  addStopMarkers();
+  if(valid.length===1)map.flyTo({center:[Number(valid[0].lng),Number(valid[0].lat)],zoom:14});
+  else{const bounds=new maplibregl.LngLatBounds();valid.forEach(s=>bounds.extend([Number(s.lng),Number(s.lat)]));map.fitBounds(bounds,{padding:70,maxZoom:15})}
+  if(tracking.position)addDriverMarker();
+  document.getElementById('mapStatus').textContent=valid.length+' ubicaciones marcadas en el mapa.';
+}
+function drawRoute(geometry){
+  if(!map||!mapReady)return;
+  clearRouteLayer();
+  map.addSource('route-source',{type:'geojson',data:{type:'Feature',properties:{},geometry}});
+  map.addLayer({id:'route-line',type:'line',source:'route-source',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#78977d','line-width':5,'line-opacity':.95}});
+  const bounds=new maplibregl.LngLatBounds();geometry.coordinates.forEach(c=>bounds.extend(c));map.fitBounds(bounds,{padding:75,maxZoom:15});
+}
+function addDriverMarker(){
+  if(!map||!mapReady||!tracking.position)return;
+  const p=tracking.position;
+  if(!driverMarker){
+    const element=document.createElement('div');element.className='vehicle-marker';element.textContent='➤';
+    driverMarker=new maplibregl.Marker({element,anchor:'center'}).setLngLat([p.lng,p.lat]).setPopup(new maplibregl.Popup().setText('Ubicación GPS del vehículo')).addTo(map);
+  }else driverMarker.setLngLat([p.lng,p.lat]);
+}
+
+/* GEOCODIFICACIÓN Y PARADAS */
+async function geocodeAddress(address){
+  const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=cl&q='+encodeURIComponent(address);
+  const response=await fetch(url,{headers:{'Accept-Language':'es'}});
+  if(!response.ok)throw new Error('No se pudo buscar la dirección. Inténtalo de nuevo.');
+  const results=await response.json();if(!results.length)throw new Error('No encontramos esta dirección: '+address);
+  return{lat:Number(results[0].lat),lng:Number(results[0].lon),label:results[0].display_name};
+}
+async function addStop(){
+  if(tracking.active)return toast('Finaliza el seguimiento antes de modificar las paradas.');
+  const address=document.getElementById('stopAddress').value.trim();if(!address)return toast('Escribe una dirección.');
+  if(stops.some(s=>(s.address||s.name||'').toLowerCase()===address.toLowerCase()))return toast('Esa dirección ya está en la lista.');
+  const btn=document.getElementById('addStopBtn');btn.disabled=true;btn.textContent='Buscando…';
+  try{
+    const place=await geocodeAddress(address);
+    stops.push({id:uid(),address,name:address,lat:place.lat,lng:place.lng,formattedAddress:place.label,serviceMinutes:10});
+    document.getElementById('stopAddress').value='';
+    clearRouteDisplay();saveData();renderStops();updateDashboard();if(mapReady)plotStops();
+    toast('Dirección localizada y añadida.');
+  }catch(e){toast(e.message)}
+  finally{btn.disabled=false;btn.textContent='Añadir'}
+}
+function renderStops(){
+  const el=document.getElementById('stopList');
+  document.getElementById('stopCount').textContent=stops.length+' direcciones';
+  document.getElementById('metricStops').textContent=stops.length;
+  el.innerHTML=stops.length?stops.map((s,i)=>`
+    <div class="stop-item">
+      <span class="stop-number ${i===0?'origin':''}">${i===0?'O':i}</span>
+      <div class="stop-name">${esc(s.address||s.name)}<div class="stop-sub">${i===0?'ORIGEN':'DESTINO · '+Number(s.serviceMinutes??10)+' MIN DE SERVICIO'}</div></div>
+      ${i>0?`<label class="muted small" title="Tiempo de servicio en minutos"><input aria-label="Minutos de servicio" class="stop-service" type="number" min="0" max="240" step="5" value="${Number(s.serviceMinutes??10)}" onchange="setStopService('${s.id}',this.value)" ${tracking.active?'disabled':''}></label>`:''}
+      <span class="stop-controls">
+        <button class="mini" title="Subir" onclick="moveStop(${i},-1)" ${i===0||tracking.active?'disabled':''}>↑</button>
+        <button class="mini" title="Bajar" onclick="moveStop(${i},1)" ${i===stops.length-1||tracking.active?'disabled':''}>↓</button>
+        <button class="mini" title="Eliminar" onclick="deleteStop('${s.id}')" ${tracking.active?'disabled':''}>×</button>
+      </span>
+    </div>`).join(''):'<div class="empty">Añade direcciones para empezar.</div>';
+  document.getElementById('optimizeBtn').disabled=stops.length<2||tracking.active;
+  document.getElementById('openMapsBtn').disabled=!routeOptimized||stops.length<2;
+  document.getElementById('clearStopsBtn').disabled=tracking.active;
+}
+function setStopService(id,value){
+  const s=stops.find(x=>x.id===id);if(!s)return;
+  s.serviceMinutes=Math.max(0,Math.min(240,Number(value)||0));
+  saveData();updateTrackingUI();
+}
+function moveStop(i,delta){
+  if(tracking.active)return;
+  const j=i+delta;if(j<0||j>=stops.length)return;
+  [stops[i],stops[j]]=[stops[j],stops[i]];
+  clearRouteDisplay();saveData();renderStops();if(mapReady)plotStops();
+}
+function deleteStop(id){
+  if(tracking.active)return toast('Finaliza el seguimiento antes de modificar la ruta.');
+  stops=stops.filter(s=>s.id!==id);
+  clearRouteDisplay();saveData();renderStops();updateDashboard();if(mapReady)plotStops();
+}
+
+/* LIMPIEZA COMPLETA DE LA PLANIFICACIÓN ACTUAL */
+function clearStops(){
+  if(tracking.active)return toast('Primero finaliza el seguimiento GPS para limpiar la ruta.');
+  if(!stops.length)return toast('No hay direcciones que limpiar.');
+
+  stops=[];
+  routeOptimized=false;
+  lastRouteUrl='';
+  routeRequestBusy=false;
+  liveRouteRequestId++;
+  nearSince=null;
+
+  tracking.index=1;
+  tracking.arrivedAt=null;
+  tracking.arrivalPosition=null;
+  tracking.completedStops=[];
+  tracking.routeDuration=0;
+  tracking.routeDistance=0;
+  tracking.totalRouteDuration=0;
+  tracking.totalRouteDistance=0;
+  tracking.lastRouteUpdate=0;
+  tracking.lastRoutePosition=null;
+  tracking.routeEstimatedAt=null;
+  tracking.estimateFallback=false;
+
+  clearRouteDisplay();
+  saveData();
+  renderStops();
+  updateDashboard();
+
+  if(mapReady){
+    clearMap();
+    if(driverMarker){driverMarker.remove();driverMarker=null}
+    map.flyTo({center:[-71.5518,-33.0245],zoom:11});
+    document.getElementById('mapStatus').textContent='Planificación limpia. Añade nuevas direcciones.';
+  }
+  toast('Ruta limpiada. Equipo, operaciones y conductor asignado se mantienen.');
+}
+
+/* OPTIMIZACIÓN DE RUTA */
+async function optimizeRoute(){
+  if(tracking.active)return toast('Finaliza el seguimiento antes de optimizar de nuevo.');
+  if(stops.length<2)return toast('Añade al menos dos direcciones.');
+  const btn=document.getElementById('optimizeBtn');
+  btn.disabled=true;btn.textContent='Calculando…';
+  document.getElementById('mapStatus').textContent='Calculando ruta optimizada…';
+  const originalStops=[...stops];
+  routeOptimized=false;lastRouteUrl='';document.getElementById('openMapsBtn').disabled=true;
+
+  try{
+    if(!stops.every(s=>Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng))))throw new Error('Hay direcciones sin localizar.');
+    let geometry,distance,duration;
+    if(stops.length>2){
+      const coordinates=stops.map(s=>`${s.lng},${s.lat}`).join(';');
+      const response=await fetch(`https://router.project-osrm.org/trip/v1/driving/${coordinates}?roundtrip=false&source=first&destination=last&overview=full&geometries=geojson&steps=false`);
+      if(!response.ok)throw new Error('El servicio de rutas no está disponible.');
+      const data=await response.json();
+      if(data.code!=='Ok'||!data.trips?.length||!data.waypoints||data.waypoints.length!==stops.length)throw new Error('No se pudo encontrar un recorrido válido.');
+      const indexed=stops.map((s,i)=>({stop:s,order:data.waypoints[i].waypoint_index}));
+      if(indexed.some(x=>!Number.isFinite(x.order)))throw new Error('El optimizador devolvió un orden incompleto.');
+      indexed.sort((a,b)=>a.order-b.order);
+      stops=indexed.map(x=>x.stop);
+      geometry=data.trips[0].geometry;distance=data.trips[0].distance;duration=data.trips[0].duration;
+    }else{
+      const coordinates=stops.map(s=>`${s.lng},${s.lat}`).join(';');
+      const response=await fetch(`https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`);
+      if(!response.ok)throw new Error('El servicio de rutas no está disponible.');
+      const data=await response.json();
+      if(data.code!=='Ok'||!data.routes?.length)throw new Error('No se pudo calcular el trayecto.');
+      geometry=data.routes[0].geometry;distance=data.routes[0].distance;duration=data.routes[0].duration;
+    }
+
+    routeOptimized=true;
+    tracking.index=1;tracking.arrivedAt=null;tracking.arrivalPosition=null;tracking.completedStops=[];
+    tracking.routeDuration=0;tracking.routeDistance=0;tracking.totalRouteDuration=0;tracking.totalRouteDistance=0;
+    tracking.lastRouteUpdate=0;tracking.lastRoutePosition=null;tracking.estimateFallback=false;
+    saveData();renderStops();
+
+    if(mapReady){clearMap();addStopMarkers();drawRoute(geometry);if(tracking.position)addDriverMarker()}
+    document.getElementById('metricDistance').textContent=(distance/1000).toFixed(1)+' km';
+    document.getElementById('metricDuration').textContent=formatDuration(duration/60);
+    document.getElementById('metricStops').textContent=stops.length;
+    document.getElementById('routeOrder').innerHTML=stops.map((s,i)=>`<div><b style="color:${i===0?'var(--blue)':'var(--green-dark)'}">${i===0?'O':i+'.'}</b> ${i===0?'Origen · ':''}${esc(s.formattedAddress||s.address||s.name)} ${i>0?`<span class="muted">(${Number(s.serviceMinutes??10)} min)</span>`:''}</div>`).join('');
+    lastRouteUrl='https://www.google.com/maps/dir/'+stops.map(s=>encodeURIComponent(s.formattedAddress||s.address||s.name)).join('/');
+    document.getElementById('openMapsBtn').disabled=false;
+    document.getElementById('mapStatus').textContent='Ruta calculada con OSRM · sin tráfico en directo.';
+    updateTrackingUI();toast('Ruta calculada y optimizada.');
+  }catch(e){
+    console.error(e);
+    stops=originalStops;
+    routeOptimized=false;lastRouteUrl='';
+    document.getElementById('openMapsBtn').disabled=true;
+    document.getElementById('mapStatus').textContent='No se pudo calcular el recorrido.';
+    if(mapReady)plotStops();
+    toast(e.message||'Error al calcular la ruta.');
+  }finally{
+    btn.disabled=stops.length<2||tracking.active;
+    btn.textContent='✦ Optimizar ruta';
+    renderStops();
+  }
+}
+function formatDuration(minutes){
+  minutes=Math.max(0,Math.round(Number(minutes)||0));
+  if(minutes<60)return minutes+' min';
+  return Math.floor(minutes/60)+' h '+(minutes%60)+' min';
+}
+function formatClock(seconds){
+  seconds=Math.max(0,Math.floor(seconds||0));
+  const h=Math.floor(seconds/3600),m=Math.floor((seconds%3600)/60),s=seconds%60;
+  if(h>0)return h+' h '+m+' min';if(m>0)return m+' min';return s+' s';
+}
+function openGoogleMaps(){
+  if(!routeOptimized||!lastRouteUrl)return toast('Primero calcula una ruta optimizada.');
+  window.open(lastRouteUrl,'_blank','noopener');
+}
+
+/* SEGUIMIENTO GPS */
+function distanceMeters(a,b){
+  const R=6371000,rad=x=>x*Math.PI/180,dLat=rad(b.lat-a.lat),dLon=rad(b.lng-a.lng);
+  const x=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+function currentStop(){return stops[tracking.index]||null}
+function startTracking(){
+  if(!navigator.geolocation)return toast('Este navegador no permite geolocalización.');
+  if(!window.isSecureContext)return toast('El GPS necesita HTTPS. Abre RutaGo desde la dirección segura de Codespaces.');
+  if(stops.length<2)return toast('Añade al menos dos direcciones.');
+  if(!routeOptimized)return toast('Primero pulsa Optimizar ruta.');
+  if(!mapReady)return toast('Espera a que termine de cargar el mapa.');
+  if(tracking.active&&!tracking.paused)return toast('El seguimiento ya está activo.');
+
+  if(tracking.paused){
+    tracking.paused=false;tracking.active=true;saveTracking();resumeGps();updateTrackingUI();toast('Seguimiento reanudado.');return;
+  }
+
+  tracking={
+    active:true,paused:false,index:1,arrivedAt:null,arrivalPosition:null,lastPosition:null,position:null,
+    routeDuration:0,routeDistance:0,totalRouteDuration:0,totalRouteDistance:0,lastRouteUpdate:0,
+    lastRoutePosition:null,startedAt:Date.now(),completedStops:[],
+    assignedDriverId:routeAssignment.driverId,assignedDriverName:routeAssignment.driverName
+  };
+  nearSince=null;routeRequestBusy=false;liveRouteRequestId++;
+  saveTracking();renderStops();updateTrackingUI();resumeGps();
+  toast(routeAssignment.driverName?'Seguimiento iniciado · '+routeAssignment.driverName:'Seguimiento GPS iniciado. Esperando posición del dispositivo.');
+}
+function resumeGps(){
+  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+  watchId=navigator.geolocation.watchPosition(handlePosition,err=>{
+    console.warn('GPS:',err);
+    document.getElementById('trackingStatus').textContent=gpsError(err);
+    document.getElementById('trackingNote').textContent='Comprueba los permisos de ubicación del navegador y que el dispositivo tenga señal GPS.';
+  },{enableHighAccuracy:true,maximumAge:3000,timeout:20000});
+  if(trackingTimer)clearInterval(trackingTimer);
+  trackingTimer=setInterval(updateTrackingUI,1000);
+}
+function pauseTracking(){
+  if(!tracking.active||tracking.paused)return;
+  tracking.paused=true;
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  if(trackingTimer){clearInterval(trackingTimer);trackingTimer=null}
+  nearSince=null;saveTracking();updateTrackingUI();toast('Seguimiento pausado.');
+}
+function stopTracking(silent=false){
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  if(trackingTimer){clearInterval(trackingTimer);trackingTimer=null}
+  tracking.active=false;tracking.paused=false;tracking.arrivedAt=null;tracking.arrivalPosition=null;
+  nearSince=null;routeRequestBusy=false;liveRouteRequestId++;
+  saveTracking();renderStops();updateTrackingUI();
+  if(!silent)toast('Seguimiento finalizado.');
+}
+function gpsError(err){
+  if(err.code===1)return 'Permiso de ubicación denegado.';
+  if(err.code===2)return 'No se pudo obtener la ubicación GPS.';
+  if(err.code===3)return 'El GPS ha tardado demasiado.';
+  return 'Error de ubicación.';
+}
+function handlePosition(position){
+  if(!tracking.active||tracking.paused)return;
+  const p={lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy||0,speed:position.coords.speed,timestamp:position.timestamp||Date.now()};
+  tracking.position=p;if(mapReady)addDriverMarker();
+  const target=currentStop();if(!target){finishTrackingAutomatically();return}
+  const accuracyGood=p.accuracy<=100,d=distanceMeters(p,{lat:Number(target.lat),lng:Number(target.lng)}),speed=Number.isFinite(p.speed)?p.speed:null;
+
+  if(tracking.arrivedAt){
+    const fromArrival=distanceMeters(tracking.arrivalPosition||p,p);
+    const elapsed=(Date.now()-tracking.arrivedAt)/1000;
+    const hasLeft=fromArrival>DEPARTURE_RADIUS||(speed!==null&&speed>2.5&&fromArrival>30);
+    if(hasLeft&&elapsed>=MIN_STOP_SECONDS){completeCurrentStop();if(!tracking.active)return}
+  }else if(accuracyGood&&d<=ARRIVAL_RADIUS){
+    const slow=speed===null||speed<1.5;
+    if(slow){
+      if(!nearSince)nearSince=Date.now();
+      if(Date.now()-nearSince>=ARRIVAL_CONFIRM_SECONDS*1000){
+        tracking.arrivedAt=Date.now();tracking.arrivalPosition={lat:p.lat,lng:p.lng};nearSince=null;
+        toast('Llegada detectada: '+(target.address||target.name));
+      }
+    }else nearSince=null;
+  }else nearSince=null;
+
+  tracking.lastPosition=p;saveTracking();
+  const now=Date.now();
+  if(map&&mapReady&&now-lastMapCenterAt>12000){map.easeTo({center:[p.lng,p.lat],duration:600});lastMapCenterAt=now}
+  updateTrackingUI();updateLiveRouteIfNeeded(p);
+}
+function completeCurrentStop(){
+  const finished=currentStop();if(!finished)return;
+  const actualSeconds=tracking.arrivedAt?Math.max(0,Math.round((Date.now()-tracking.arrivedAt)/1000)):null;
+  finished.completedAt=Date.now();finished.actualStopSeconds=actualSeconds;
+  finished.actualStopMinutes=actualSeconds===null?null:Math.round(actualSeconds/60);
+  tracking.completedStops=tracking.completedStops||[];tracking.completedStops.push(finished.id);
+  toast('Destino completado: '+(finished.address||finished.name));
+  tracking.index++;tracking.arrivedAt=null;tracking.arrivalPosition=null;nearSince=null;
+  tracking.lastRouteUpdate=0;tracking.routeDuration=0;tracking.routeDistance=0;
+  tracking.totalRouteDuration=0;tracking.totalRouteDistance=0;tracking.lastRoutePosition=null;
+  liveRouteRequestId++;routeRequestBusy=false;
+  saveData();
+  if(tracking.index>=stops.length){finishTrackingAutomatically();return}
+  updateTrackingUI();updateLiveRouteIfNeeded(tracking.position);
+}
+function finishTrackingAutomatically(){
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  if(trackingTimer){clearInterval(trackingTimer);trackingTimer=null}
+  tracking.active=false;tracking.paused=false;tracking.arrivedAt=null;
+  routeRequestBusy=false;liveRouteRequestId++;
+  saveTracking();renderStops();updateTrackingUI();toast('¡Has llegado al destino final! Viaje completado.');
+}
+
+/* RECÁLCULO GPS: no bloquear reintentos si OSRM falla */
+async function updateLiveRouteIfNeeded(p){
+  if(!p||!tracking.active||tracking.paused||routeRequestBusy)return;
+  const now=Date.now(),last=tracking.lastRoutePosition,moved=last?distanceMeters(last,p):Infinity;
+  if(tracking.lastRouteUpdate&&now-tracking.lastRouteUpdate<ROUTE_REFRESH_MS&&moved<ROUTE_REFRESH_METERS)return;
+  const destinations=stops.slice(tracking.index);if(!destinations.length)return;
+  const points=[p,...destinations],coordinates=points.map(point=>`${point.lng},${point.lat}`).join(';');
+  routeRequestBusy=true;
+  const requestId=++liveRouteRequestId;
+  try{
+    const response=await fetch(`https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=false&steps=false`);
+    if(!response.ok)throw new Error('No se pudo actualizar la ruta.');
+    const data=await response.json();
+    if(data.code!=='Ok'||!data.routes?.length)throw new Error('Ruta no disponible.');
+    if(requestId!==liveRouteRequestId||!tracking.active||tracking.paused)return;
+    const route=data.routes[0],legs=route.legs||[];
+    tracking.routeDuration=legs[0]?.duration||0;
+    tracking.routeDistance=legs[0]?.distance||0;
+    tracking.totalRouteDuration=route.duration||0;
+    tracking.totalRouteDistance=route.distance||0;
+    tracking.routeEstimatedAt=Date.now();
+    tracking.lastRouteUpdate=Date.now();
+    tracking.lastRoutePosition={lat:p.lat,lng:p.lng};
+    tracking.estimateFallback=false;
+    saveTracking();updateTrackingUI();
+  }catch(e){
+    console.warn('Actualización de ruta:',e);
+    if(requestId===liveRouteRequestId){
+      tracking.estimateFallback=true;
+      document.getElementById('trackingNote').textContent='Actualización pendiente. Se conserva la última estimación disponible mientras se recupera el servicio de rutas.';
+      updateTrackingUI();
+    }
+  }finally{
+    if(requestId===liveRouteRequestId)routeRequestBusy=false;
+  }
+}
+
+/* INTERFAZ DEL SEGUIMIENTO */
+function updateTrackingUI(){
+  const active=tracking.active&&!tracking.paused,badge=document.getElementById('trackingBadge'),status=document.getElementById('trackingStatus');
+  document.getElementById('gpsDot').classList.toggle('on',active);
+  badge.textContent=tracking.active?(tracking.paused?'PAUSADO':'GPS ACTIVO'):'INACTIVO';
+  if(!tracking.active)status.textContent='GPS desactivado';
+  else if(tracking.paused)status.textContent='Seguimiento pausado';
+  else if(tracking.arrivedAt)status.textContent='Parada detectada · contando tiempo';
+  else if(tracking.position)status.textContent='Ubicación actualizándose';
+  else status.textContent='Esperando señal GPS…';
+
+  document.getElementById('startTrackingBtn').disabled=tracking.active&&!tracking.paused;
+  document.getElementById('startTrackingBtn').textContent=tracking.paused?'▶ Reanudar seguimiento':'▶ Iniciar seguimiento GPS';
+  document.getElementById('pauseTrackingBtn').disabled=!tracking.active||tracking.paused;
+  document.getElementById('stopTrackingBtn').disabled=!tracking.active;
+  document.getElementById('clearStopsBtn').disabled=tracking.active;
+
+  const target=currentStop();
+  if(!tracking.active){
+    ['liveEta','liveDistance','liveArrival','liveStop','liveDwell','liveTotal'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('trackingProgress').style.width='0%';
+    document.getElementById('trackingNote').textContent='Optimiza una ruta y pulsa «Iniciar seguimiento GPS». Necesitarás autorizar la ubicación del dispositivo.';
+    return;
+  }
+  if(!target){document.getElementById('liveStop').textContent='Finalizado';return}
+
+  const drivingNext=Math.max(0,Number(tracking.routeDuration)||0);
+  const drivingTotal=Math.max(0,Number(tracking.totalRouteDuration)||drivingNext);
+  const remainingStops=stops.slice(tracking.index);
+  let serviceSeconds=remainingStops.reduce((sum,s)=>sum+Math.max(0,Number(s.serviceMinutes??10))*60,0);
+  let dwellSeconds=0;
+  if(tracking.arrivedAt){
+    dwellSeconds=Math.max(0,(Date.now()-tracking.arrivedAt)/1000);
+    const plannedService=Math.max(0,Number(target.serviceMinutes??10))*60;
+    serviceSeconds=Math.max(0,plannedService-dwellSeconds)+remainingStops.slice(1).reduce((sum,s)=>sum+Math.max(0,Number(s.serviceMinutes??10))*60,0);
+  }
+
+  const totalSeconds=drivingTotal+serviceSeconds,etaSeconds=tracking.arrivedAt?0:drivingNext;
+  document.getElementById('liveEta').textContent=tracking.arrivedAt?'En parada':drivingNext?formatDuration(etaSeconds/60):'Calculando…';
+  document.getElementById('liveDistance').textContent=tracking.arrivedAt?'0 m':tracking.routeDistance?tracking.routeDistance>=1000?(tracking.routeDistance/1000).toFixed(1)+' km':Math.round(tracking.routeDistance)+' m':'Calculando…';
+  document.getElementById('liveStop').textContent=tracking.index+' / '+(stops.length-1);
+  document.getElementById('liveDwell').textContent=tracking.arrivedAt?formatClock(dwellSeconds):'En ruta';
+  document.getElementById('liveTotal').textContent=formatDuration(totalSeconds/60);
+  document.getElementById('liveArrival').textContent=tracking.arrivedAt?'En parada':drivingNext?new Date(Date.now()+totalSeconds*1000).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}):'Calculando…';
+
+  const completed=(tracking.completedStops||[]).length,totalDestinations=Math.max(1,stops.length-1);
+  document.getElementById('trackingProgress').style.width=Math.min(100,(completed/totalDestinations)*100)+'%';
+  const assigned=tracking.assignedDriverName?' · Conductor: '+tracking.assignedDriverName:'';
+  document.getElementById('trackingNote').textContent=tracking.estimateFallback?
+    'Actualización pendiente. Se conserva la última estimación disponible. ETA estimada, sin tráfico en directo.'+assigned:
+    (tracking.arrivedAt?'Llegada detectada. El contador registra el tiempo en esta parada. Al reanudar la marcha y alejarte, RutaGo avanzará al siguiente destino.':'GPS activo. RutaGo recalcula los trayectos restantes desde tu ubicación. ETA estimada, sin tráfico en directo.')+assigned;
+}
+
+/* RECUPERACIÓN DE SESIÓN */
+function restoreTracking(){
+  if(!tracking.active)return;
+  tracking.paused=true;saveTracking();updateTrackingUI();
+  document.getElementById('trackingNote').textContent='Había un seguimiento en curso. Por seguridad se ha recuperado pausado. Pulsa «Reanudar seguimiento» para volver a activar el GPS.';
+}
+
+/* INICIO */
+renderTrips();
+renderTeam();
+renderRouteDriver();
+renderStops();
+updateDashboard();
+initMap();
+restoreTracking();
+updateTrackingUI();
+</script>
+</body>
+</html>
