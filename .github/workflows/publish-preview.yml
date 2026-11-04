@@ -1,6 +1,5 @@
-name: Publish RutaGo Preview
+name: Validate RutaGo Preview
 
-# Independent preview deployment; production branch main is untouched.
 on:
   push:
     branches:
@@ -15,18 +14,13 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages-preview
+  group: rutago-preview-check
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout preview branch
@@ -34,14 +28,9 @@ jobs:
         with:
           ref: rutago-preview
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload preview files
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-
-      - name: Publish preview
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Validate preview files
+        run: |
+          test -s index.html
+          test -s manifest.json
+          test -s sw.js
+          echo "RutaGo Preview files are present."
