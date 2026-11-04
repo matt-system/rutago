@@ -1,5 +1,5 @@
 /* RutaGo Preview — actualización robusta v6 */
-const CACHE_VERSION='rutago-mobility-v6';
+const CACHE_VERSION='rutago-mobility-v7';
 const TILE_CACHE='rutago-map-assets-v1';
 const APP_SHELL=['./','./index.html','./manifest.json'];
 self.addEventListener('install',event=>{event.waitUntil((async()=>{const cache=await caches.open(CACHE_VERSION);await Promise.all(APP_SHELL.map(async path=>{try{const response=await fetch(path,{cache:'reload'});if(response.ok)await cache.put(path,response);}catch(e){}}));await self.skipWaiting();})());});
