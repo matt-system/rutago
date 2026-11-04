@@ -1,5 +1,5 @@
 /* RutaGo Preview — Movilidad v3: refresco de interfaz */
-const CACHE_VERSION='rutago-mobility-v4';
+const CACHE_VERSION='rutago-mobility-v5';
 const TILE_CACHE='rutago-map-assets-v1';
 const APP_SHELL=['./','./index.html','./manifest.json','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./icons/favicon.png'];
 self.addEventListener('install',event=>{event.waitUntil((async()=>{const cache=await caches.open(CACHE_VERSION);await cache.addAll(APP_SHELL);await self.skipWaiting();})());});
