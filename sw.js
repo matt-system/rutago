@@ -1,60 +1,10 @@
-/* RutaGo Preview — Movilidad v2 */
-const CACHE_VERSION='rutago-mobility-v2';
+/* RutaGo Preview — Movilidad v3: refresco de interfaz */
+const CACHE_VERSION='rutago-mobility-v3';
 const TILE_CACHE='rutago-map-assets-v1';
 const APP_SHELL=['./','./index.html','./manifest.json','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./icons/favicon.png'];
-
-self.addEventListener('install',event=>{
-  event.waitUntil((async()=>{
-    const cache=await caches.open(CACHE_VERSION);
-    await cache.addAll(APP_SHELL);
-    await self.skipWaiting();
-  })());
-});
-
-self.addEventListener('activate',event=>{
-  event.waitUntil((async()=>{
-    const keys=await caches.keys();
-    await Promise.all(keys.filter(k=>k.startsWith('rutago-shell-')&&k!==CACHE_VERSION).map(k=>caches.delete(k)));
-    await self.clients.claim();
-  })());
-});
-
-self.addEventListener('message',event=>{
-  if(event.data&&event.data.type==='SKIP_WAITING')self.skipWaiting();
-});
-
-function isMapStatic(url){
-  return url.hostname==='unpkg.com'||url.hostname==='fonts.googleapis.com'||url.hostname==='fonts.gstatic.com'||url.hostname==='tiles.openfreemap.org';
-}
-function trimCache(cacheName,maxItems){
-  caches.open(cacheName).then(async cache=>{const keys=await cache.keys();if(keys.length>maxItems)await cache.delete(keys[0]);});
-}
-
-self.addEventListener('fetch',event=>{
-  const req=event.request;if(req.method!=='GET')return;
-  const url=new URL(req.url);
-  // La aplicación y sus archivos propios: red primero para recibir versiones nuevas,
-  // con respaldo local cuando el dispositivo está sin conexión.
-  if(url.origin===self.location.origin){
-    if(req.mode==='navigate'){
-      event.respondWith((async()=>{
-        try{const fresh=await fetch(req);const cache=await caches.open(CACHE_VERSION);cache.put('./index.html',fresh.clone());return fresh;}
-        catch(e){return (await caches.match('./index.html'))||(await caches.match('./'));}
-      })());return;
-    }
-    event.respondWith((async()=>{
-      const cached=await caches.match(req);if(cached)return cached;
-      try{const response=await fetch(req);if(response.ok){const cache=await caches.open(CACHE_VERSION);cache.put(req,response.clone());}return response;}
-      catch(e){return new Response('Recurso no disponible sin conexión.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}
-    })());return;
-  }
-  // Guarda recursos estáticos del mapa que ya se hayan descargado. No se cachean
-  // peticiones de geocodificación ni de cálculo de rutas: requieren conexión.
-  if(isMapStatic(url)){
-    event.respondWith((async()=>{
-      const cache=await caches.open(TILE_CACHE),cached=await cache.match(req);
-      const network=fetch(req).then(response=>{if(response&& (response.ok||response.type==='opaque')){cache.put(req,response.clone());trimCache(TILE_CACHE,160);}return response;}).catch(()=>null);
-      return cached||await network||new Response('',{status:504});
-    })());
-  }
-});
+self.addEventListener('install',event=>{event.waitUntil((async()=>{const cache=await caches.open(CACHE_VERSION);await cache.addAll(APP_SHELL);await self.skipWaiting();})());});
+self.addEventListener('activate',event=>{event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>(k.startsWith('rutago-shell-')||k.startsWith('rutago-mobility-'))&&k!==CACHE_VERSION).map(k=>caches.delete(k)));await self.clients.claim();})());});
+self.addEventListener('message',event=>{if(event.data&&event.data.type==='SKIP_WAITING')self.skipWaiting();});
+function isMapStatic(url){return url.hostname==='unpkg.com'||url.hostname==='fonts.googleapis.com'||url.hostname==='fonts.gstatic.com'||url.hostname==='tiles.openfreemap.org';}
+function trimCache(cacheName,maxItems){caches.open(cacheName).then(async cache=>{const keys=await cache.keys();if(keys.length>maxItems)await cache.delete(keys[0]);});}
+self.addEventListener('fetch',event=>{const req=event.request;if(req.method!=='GET')return;const url=new URL(req.url);if(url.origin===self.location.origin){if(req.mode==='navigate'){event.respondWith((async()=>{try{const fresh=await fetch(req,{cache:'no-store'});const cache=await caches.open(CACHE_VERSION);cache.put('./index.html',fresh.clone());return fresh;}catch(e){return (await caches.match('./index.html'))||(await caches.match('./'));}})());return;}event.respondWith((async()=>{const cached=await caches.match(req);if(cached)return cached;try{const response=await fetch(req);if(response.ok){const cache=await caches.open(CACHE_VERSION);cache.put(req,response.clone());}return response;}catch(e){return new Response('Recurso no disponible sin conexión.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());return;}if(isMapStatic(url)){event.respondWith((async()=>{const cache=await caches.open(TILE_CACHE),cached=await cache.match(req);const network=fetch(req).then(response=>{if(response&&(response.ok||response.type==='opaque')){cache.put(req,response.clone());trimCache(TILE_CACHE,160);}return response;}).catch(()=>null);return cached||await network||new Response('',{status:504});})());}});
