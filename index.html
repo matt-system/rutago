@@ -38,7 +38,8 @@
 </div></main></div><div id="toast" class="toast"></div>
 <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
 <script>
-const $=id=>document.getElementById(id);let map,markers=[],routeUrl='',routePoints=[],myPos=null;\nconst CHAT_API='https://rutago-chat-api.matthieupierremarie.workers.dev';let chatTimer=null,chatMe=null,chatMembers=[];
+const $=id=>document.getElementById(id);let map,markers=[],routeUrl='',routePoints=[],myPos=null;
+const CHAT_API='https://rutago-chat-api.matthieupierremarie.workers.dev';let chatTimer=null,chatMe=null,chatMembers=[];
 const read=(k,d=[])=>{try{return JSON.parse(localStorage.getItem('rg2_'+k))??d}catch{return d}},save=(k,v)=>localStorage.setItem('rg2_'+k,JSON.stringify(v));
 function toast(t){$('toast').textContent=t;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2600)}
 function show(id){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.view===id));$('title').textContent=({ruta:'Mi recorrido',chat:'Chat',circulo:'Mi círculo'})[id];if(id==='ruta'&&map)setTimeout(()=>map.resize(),100)}
