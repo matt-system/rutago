@@ -1,0 +1,46 @@
+name: Publish RutaGo Preview
+
+on:
+  push:
+    branches:
+      - rutago-preview
+    paths:
+      - 'index.html'
+      - 'manifest.json'
+      - 'sw.js'
+      - 'icons/**'
+      - '.github/workflows/publish-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-preview
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout preview branch
+        uses: actions/checkout@v4
+        with:
+          ref: rutago-preview
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload preview files
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Publish preview
+        id: deployment
+        uses: actions/deploy-pages@v4
