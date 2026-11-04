@@ -52,6 +52,7 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.
 .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:21px;box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s}
 .card:hover{border-color:#d8ded6;box-shadow:0 8px 28px rgba(39,53,46,.065)}
 .stat-card{position:relative;overflow:hidden;min-height:128px}
+.stat-link{cursor:pointer;outline:none}.stat-link:hover,.stat-link:focus-visible{border-color:#a9bea9;box-shadow:0 9px 28px rgba(82,111,89,.13);transform:translateY(-2px)}.stat-link:focus-visible{outline:3px solid rgba(120,151,125,.3);outline-offset:3px}
 .stat-card:after{content:"";position:absolute;width:90px;height:90px;border-radius:50%;background:rgba(120,151,125,.09);right:-28px;bottom:-37px}
 .stat-label{color:#929c94;font-size:9px;font-weight:800;letter-spacing:1.2px}
 .stat-value{font:800 32px 'Manrope';margin-top:13px;letter-spacing:-1.2px;color:#394a40}
@@ -202,10 +203,10 @@ th{color:#98a198;font-size:9px;letter-spacing:1px}
     <button class="btn primary" onclick="showSection('planificador')">＋ Planificar ruta</button>
   </div>
   <div class="grid">
-    <div class="card stat-card"><div class="stat-label">OPERACIONES TOTALES</div><div class="stat-value" id="statTrips">0</div><div class="stat-foot">Trabajos registrados</div></div>
-    <div class="card stat-card"><div class="stat-label">COMPLETADAS</div><div class="stat-value" id="statDone">0</div><div class="stat-foot">Operaciones finalizadas</div></div>
-    <div class="card stat-card"><div class="stat-label">PARADAS PLANIFICADAS</div><div class="stat-value" id="statStops">0</div><div class="stat-foot">Direcciones en tu ruta</div></div>
-    <div class="card stat-card"><div class="stat-label">PERSONAS EN EL EQUIPO</div><div class="stat-value" id="statTeam">0</div><div class="stat-foot">Conductores y operadores</div></div>
+    <div class="card stat-card stat-link" role="button" tabindex="0" onclick="dashboardShortcut('operaciones')"><div class="stat-label">OPERACIONES TOTALES</div><div class="stat-value" id="statTrips">0</div><div class="stat-foot">Trabajos registrados</div></div>
+    <div class="card stat-card stat-link" role="button" tabindex="0" onclick="dashboardShortcut('completadas')"><div class="stat-label">COMPLETADAS</div><div class="stat-value" id="statDone">0</div><div class="stat-foot">Operaciones finalizadas</div></div>
+    <div class="card stat-card stat-link" role="button" tabindex="0" onclick="dashboardShortcut('planificador')"><div class="stat-label">PARADAS PLANIFICADAS</div><div class="stat-value" id="statStops">0</div><div class="stat-foot">Direcciones en tu ruta</div></div>
+    <div class="card stat-card stat-link" role="button" tabindex="0" onclick="dashboardShortcut('equipo')"><div class="stat-label">PERSONAS EN EL EQUIPO</div><div class="stat-value" id="statTeam">0</div><div class="stat-foot">Conductores y operadores</div></div>
   </div>
   <div class="card"><h3 class="panel-title section-heading">Operaciones recientes</h3><div id="recentTrips" class="empty">Todavía no hay operaciones registradas.</div></div>
 </section>
@@ -394,6 +395,14 @@ function updateRouteDriverInfo(){
 }
 
 /* NAVEGACIÓN */
+let dashboardTripFilter="";
+function dashboardShortcut(target){
+  if(target==="completadas"){dashboardTripFilter="Completada";renderTrips();showSection("operaciones");document.getElementById("tripTable").scrollIntoView({behavior:"smooth",block:"center"});return;}
+  dashboardTripFilter="";
+  if(target==="operaciones")renderTrips();
+  showSection(target);
+  if(target==="operaciones")document.getElementById("tripTable").scrollIntoView({behavior:"smooth",block:"center"});
+}
 function showSection(id){
   document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===id));
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
@@ -418,9 +427,10 @@ function updateDashboard(){
 }
 function renderTrips(){
   const el=document.getElementById('tripTable');
-  el.innerHTML=trips.length?
-    `<table><thead><tr><th>OPERACIÓN</th><th>CONDUCTOR</th><th>VEHÍCULO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>${[...trips].reverse().map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.driver||'—')}</td><td>${esc(t.vehicle||'—')}</td><td><span class="status ${t.status==='Completada'?'done':''}">${esc(t.status)}</span></td><td><button class="btn" onclick="toggleTrip('${t.id}')">${t.status==='Completada'?'Reabrir':'Completar'}</button> <button class="btn danger" onclick="deleteTrip('${t.id}')">Eliminar</button></td></tr>`).join('')}</tbody></table>`:
-    '<div class="empty">No hay operaciones. Crea la primera arriba.</div>';
+  const visibleTrips=dashboardTripFilter?trips.filter(t=>t.status===dashboardTripFilter):trips;
+  el.innerHTML=visibleTrips.length?
+    `<table><thead><tr><th>OPERACIÓN</th><th>CONDUCTOR</th><th>VEHÍCULO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>${[...visibleTrips].reverse().map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.driver||'—')}</td><td>${esc(t.vehicle||'—')}</td><td><span class="status ${t.status==='Completada'?'done':''}">${esc(t.status)}</span></td><td><button class="btn" onclick="toggleTrip('${t.id}')">${t.status==='Completada'?'Reabrir':'Completar'}</button> <button class="btn danger" onclick="deleteTrip('${t.id}')">Eliminar</button></td></tr>`).join('')}</tbody></table>`:
+    `<div class="empty">${dashboardTripFilter?"Todavía no hay operaciones completadas.":"No hay operaciones. Crea la primera arriba."}</div>`;
   const select=document.getElementById('tripDriver'),value=select.value;
   select.innerHTML='<option value="">Sin asignar</option>'+team.map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
   select.value=value;
