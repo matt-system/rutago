@@ -81,5 +81,5 @@ function useSavedPin(i){const p=read('pins',[])[i];if(!p)return;routePoints.push
 function deletePin(i){const pins=read('pins',[]);pins.splice(i,1);save('pins',pins);renderSavedPinsList();renderPinsOnMap()}
 window.addEventListener('online',()=>{$('connection').textContent='● Conectado';renderChat()});window.addEventListener('offline',()=>{$('connection').textContent='● Sin conexión';renderChat()});
 $('connection').textContent=navigator.onLine?'● Conectado':'● Sin conexión';initMap();renderSavedPins();initCircleChat();
-if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=7').catch(()=>{});
+if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=8').catch(()=>{});
 </script></body></html>
