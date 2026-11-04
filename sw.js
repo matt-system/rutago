@@ -1,5 +1,5 @@
-/* RutaGo Service Worker — v1.0.0 */
-const CACHE_VERSION='rutago-shell-v1.0.0';
+/* RutaGo Preview — Movilidad v2 */
+const CACHE_VERSION='rutago-mobility-v2';
 const TILE_CACHE='rutago-map-assets-v1';
 const APP_SHELL=['./','./index.html','./manifest.json','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./icons/favicon.png'];
 
