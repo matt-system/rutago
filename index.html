@@ -77,5 +77,5 @@ function initCircleChat(){const code=new URLSearchParams(location.search).get('j
 function renderSavedPins(){const d=read('draft',null);if(d){$('origin').value=d.a||'';$('destination').value=d.b||'';routePoints=d.routePoints||[];renderStops()}}
 window.addEventListener('online',()=>{$('connection').textContent='● Conectado';renderChat()});window.addEventListener('offline',()=>{$('connection').textContent='● Sin conexión';renderChat()});
 $('connection').textContent=navigator.onLine?'● Conectado':'● Sin conexión';initMap();renderSavedPins();initCircleChat();
-if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
+if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=7').catch(()=>{});
 </script></body></html>
