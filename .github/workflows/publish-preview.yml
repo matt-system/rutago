@@ -34,3 +34,14 @@ jobs:
           test -s manifest.json
           test -s sw.js
           echo "RutaGo Preview files are present."
+
+      - name: Check JavaScript syntax
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const scripts = [...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)];
+          if (!scripts.length) throw new Error('No inline application script found');
+          fs.writeFileSync('/tmp/rutago-app.js', scripts[scripts.length - 1][1]);
+          NODE
+          node --check /tmp/rutago-app.js
