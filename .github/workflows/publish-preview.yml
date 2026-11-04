@@ -1,5 +1,6 @@
 name: Publish RutaGo Preview
 
+# Independent preview deployment; production branch main is untouched.
 on:
   push:
     branches:
