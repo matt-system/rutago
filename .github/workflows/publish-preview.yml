@@ -40,8 +40,9 @@ jobs:
           node - <<'NODE'
           const fs = require('fs');
           const html = fs.readFileSync('index.html', 'utf8');
-          const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
-          if (!scripts.length) throw new Error('No inline application script found');
-          fs.writeFileSync('/tmp/rutago-app.js', scripts[scripts.length - 1][1]);
+          const start = html.indexOf('<script>', html.indexOf('</script>') + 1);
+          const end = html.lastIndexOf('</script>');
+          if (start < 0 || end <= start) throw new Error('No inline application script found');
+          fs.writeFileSync('/tmp/rutago-app.js', html.slice(start + 8, end));
           NODE
           node --check /tmp/rutago-app.js
