@@ -394,6 +394,21 @@ function updateRouteDriverInfo(){
 }
 
 /* NAVEGACIÓN */
+/* NAVEGACIÓN DESDE LOS INDICADORES DEL RESUMEN */
+let dashboardTripFilter="";
+function dashboardShortcut(target){
+  if(target==="completadas"){
+    dashboardTripFilter="Completada";
+    renderTrips();
+    showSection("operaciones");
+    document.getElementById("tripTable")?.scrollIntoView({behavior:"smooth",block:"center"});
+    return;
+  }
+  dashboardTripFilter="";
+  if(target==="operaciones")renderTrips();
+  showSection(target);
+  if(target==="operaciones")document.getElementById("tripTable")?.scrollIntoView({behavior:"smooth",block:"center"});
+}
 function showSection(id){
   document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===id));
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
