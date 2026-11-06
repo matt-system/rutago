@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
@@ -116,7 +115,7 @@ class MeshEngine {
     if (running) return;
     await init();
     if (Platform.isAndroid) {
-      final android = await const DeviceInfoPlugin().androidInfo;
+      final android = await DeviceInfoPlugin().androidInfo;
       final requiredPermissions = android.version.sdkInt >= 31
           ? [Permission.bluetoothScan, Permission.bluetoothAdvertise, Permission.bluetoothConnect]
           : [Permission.locationWhenInUse];
