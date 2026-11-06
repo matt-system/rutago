@@ -25,7 +25,7 @@ This is the native radio client for MESHBIT. The Worker-hosted PWA cannot provid
 - Android APK builds are uploaded by GitHub Actions as the `meshbit-native-android-apk` artifact.
 - iOS support is included in the Flutter project and its Bluetooth/local-network usage declarations. A signed iPhone install/TestFlight release requires Apple signing credentials and a macOS build.
 - iOS limits BLE scanning/advertising and background execution. Bluetooth background modes do not make an iPhone a permanent always-on relay. Keep the app foregrounded for reliable relay behavior.
-- The native client is currently a separate native build target from the Worker-hosted PWA. It does not yet share the PWA identity vault or contacts.
+- The native app embeds the existing Worker-hosted chat in a separate **CHAT** screen; that screen needs internet. The **MESH** screen is native and works locally without internet or mobile data. The native client does not yet share the PWA identity vault or contacts.
 - The `nearby` transport is a young third-party dependency. CI compilation/unit checks are not proof of a successful multi-phone field test; radio behavior needs physical Android and iPhone testing.
 
 ## Security notes
