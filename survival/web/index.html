@@ -52,7 +52,7 @@ input,textarea,.search{font-size:16px;min-height:50px}
   <button class="active" data-page="home"><span class="ico">⌂</span>Inicio</button>
   <button data-page="library"><span class="ico">▤</span>Biblioteca</button>
   <button data-page="maps"><span class="ico">⌖</span>Mapas</button>
-  <button data-page="radio"><span class="ico">📻</span>Radio</button>
+
   <button data-page="assistant"><span class="ico">✳</span>Asistente IA</button>\n  <button data-page="mesh"><span class="ico">⌁</span>Chat cercano</button>
   <button data-page="tools"><span class="ico">⌘</span>Herramientas</button>
   <button data-page="notes"><span class="ico">✎</span>Notas</button>
@@ -115,72 +115,6 @@ input,textarea,.search{font-size:16px;min-height:50px}
    <p style="font-size:11px;margin-top:10px;color:var(--muted)">Cartografía © OpenStreetMap contributors · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" style="color:#b8dda9">Atribución y licencia</a></p>
   </div>
  </section>
- <section id="radio" class="section">
-  <div class="section-title"><h2>Radio de emergencia</h2><p>Guía y directorio de escucha que queda guardado en el teléfono. No necesita Internet una vez cargada la aplicación.</p></div>
-  <div class="grid">
-   <div class="card wide">
-    <div class="terminal-head"><span>/// RECEPTOR AM · FM · SW</span><span class="terminal-status" id="radioHardware">● RECEPTOR NO DETECTADO</span></div>
-    <h3>Escuchar transmisiones sin Internet</h3>
-    <p>El teléfono solo puede sintonizar radio si incorpora un chip FM compatible y el fabricante habilita su uso. En muchos modelos no existe esa función. Bluetooth no recibe emisoras AM/FM.</p>
-    <div class="notice">Para una emergencia real, lo más fiable es tener una radio portátil AM/FM/SW independiente, con pilas o manivela. SURVIVAL no puede encender ni sintonizar por sí sola un receptor USB-C genérico; cada modelo necesita compatibilidad y controladores específicos.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
-     <button class="btn" onclick="checkRadioSupport()">COMPROBAR ESTE TELÉFONO</button>
-     <button class="btn secondary" onclick="copyRadioChecklist()">COPIAR LISTA DE PREPARACIÓN</button>
-    </div>
-    <p id="radioSupportText" class="muted" style="margin-top:12px">La comprobación indica el tipo de dispositivo; no puede confirmar la presencia de un chip FM.</p>
-   </div>
-   <div class="card" style="grid-column:span 12;border-color:#496548">
-    <div class="terminal-head"><span>/// RECEPTOR EXTERNO · FUTURA INTEGRACIÓN</span><span class="terminal-status">DISEÑADO PARA iPHONE + ANDROID</span></div>
-    <h3>Conectar una radio externa y escuchar desde SURVIVAL</h3>
-    <p>La próxima integración permitirá usar un receptor AM/FM/SW externo y enviar su audio al teléfono. Así, un iPhone también podrá escuchar una radio física aunque no tenga sintonizador FM integrado.</p>
-    <div class="tile-list">
-     <div class="tile"><div class="tile-icon">📻</div><div><strong>Receptor AM / FM / onda corta</strong><small>El receptor externo hace la sintonización; SURVIVAL no inventa una radio dentro del teléfono.</small></div></div>
-     <div class="tile"><div class="tile-icon">🎧</div><div><strong>Audio hacia el teléfono</strong><small>La vía preferida será un receptor con salida de audio Bluetooth compatible. También se evaluarán receptores USB de audio con soporte específico para cada sistema.</small></div></div>
-     <div class="tile"><div class="tile-icon">📲</div><div><strong>Integración nativa futura</strong><small>La app nativa podrá guiar el emparejamiento y, cuando el accesorio y el sistema lo permitan, incorporar escucha y registro de comunicados.</small></div></div>
-    </div>
-    <div class="notice">ESTADO: diseño incorporado, todavía no conectado ni probado con un receptor físico. El audio Bluetooth normalmente se reproduce por el sistema del teléfono; una app web no puede capturarlo libremente. Antes de habilitar esta función habrá que elegir y probar un modelo de receptor concreto en iPhone y Android.</div>
-    <p class="muted" style="margin-top:12px">No necesitas comprar un adaptador ahora. Primero definiremos un receptor compatible y haremos pruebas reales para evitar que compres un accesorio que después no funcione.</p>
-   </div>
-   <div class="card narrow">
-    <div class="terminal-head"><span>/// REGLAS DE ESCUCHA</span><span class="terminal-status">MODO RX</span></div>
-    <div class="tile-list">
-     <div class="tile"><div class="tile-icon">🎧</div><div><strong>FM integrada</strong><small>Requiere chip FM, app compatible y, en muchos equipos, auriculares con cable como antena.</small></div></div>
-     <div class="tile"><div class="tile-icon">📻</div><div><strong>AM / onda corta</strong><small>Usa un receptor externo AM/SW; el teléfono no suele tener hardware para esas bandas.</small></div></div>
-     <div class="tile"><div class="tile-icon">🔌</div><div><strong>USB-C externo</strong><small>Solo funcionará si el receptor y su protocolo son compatibles con el teléfono y existe una app/controlador para ese modelo.</small></div></div>
-    </div>
-   </div>
-   <div class="card" style="grid-column:span 12">
-    <div class="terminal-head"><span>/// FRECUENCIAS DE REFERENCIA · CHILE</span><span class="terminal-status">DIRECTORIO OFFLINE</span></div>
-    <p>Son puntos de encuentro publicados por redes de radioaficionados, no emisoras comerciales FM. La actividad puede cambiar durante una emergencia. Escucha solamente; transmite en bandas de radioaficionados únicamente si tienes la autorización correspondiente.</p>
-    <div class="book-grid" style="margin-top:14px">
-     <article class="book"><div class="eyebrow">HF · 40 METROS</div><strong>7.190 MHz · LSB</strong><p>Red RECNA del Servicio de Emergencia del Radio Club de Chile. Horario habitual publicado: lunes a viernes, 20:30–21:30 hora Chile.</p></article>
-     <article class="book"><div class="eyebrow">HF · 20 METROS</div><strong>14.255 MHz · USB</strong><p>Red Chile Mar y Tierra. Horario habitual publicado: todos los días, 13:30–14:30 hora Chile.</p></article>
-     <article class="book"><div class="eyebrow">VHF · 2 METROS</div><strong>146.520 MHz · FM</strong><p>Frecuencia simplex de encuentro publicada por CE3SER. No garantiza que haya operadores escuchando.</p></article>
-     <article class="book"><div class="eyebrow">UHF · 70 CENTÍMETROS</div><strong>433.520 MHz · FM</strong><p>Frecuencia simplex de encuentro publicada por CE3SER. Requiere un equipo de radio compatible.</p></article>
-     <article class="book"><div class="eyebrow">HF · RED NACIONAL</div><strong>7.085 MHz</strong><p>Frecuencia de ejercicios de la Red Nacional de Emergencia CE3RNE. Confirma la actividad y el protocolo vigentes con la red.</p></article>
-     <article class="book"><div class="eyebrow">MARÍTIMA · VHF</div><strong>Canal 16 · 156.800 MHz</strong><p>Canal internacional de socorro, seguridad y llamada marítima. No es una frecuencia de radio FM comercial.</p></article>
-    </div>
-    <div class="notice">Las frecuencias y horarios son referencias publicadas por organizaciones de radioaficionados, no una garantía de servicio oficial permanente. En una emergencia, sigue las instrucciones de SENAPRED y de los operadores de la red. No transmitas en frecuencias de servicios de emergencia ni interrumpas tráfico de socorro.</div>
-    <div class="guide-sources" style="margin-top:14px">
-     <a href="https://ce3ser.cl/" target="_blank" rel="noreferrer">CE3SER · Servicio de Emergencia del Radio Club de Chile ↗</a>
-     <a href="https://www.ce3rne.cl/" target="_blank" rel="noreferrer">CE3RNE · Red Nacional de Emergencia ↗</a>
-     <a href="https://www.senapred.gov.cl/" target="_blank" rel="noreferrer">SENAPRED · Información oficial ↗</a>
-    </div>
-   </div>
-   <div class="card" style="grid-column:span 12">
-    <div class="terminal-head"><span>/// BITÁCORA DE MENSAJES RECIBIDOS POR RADIO</span><span class="terminal-status">GUARDADO LOCAL</span></div>
-    <p>Registra a mano un comunicado que hayas escuchado. SURVIVAL lo guarda en este teléfono para consultarlo sin conexión. No lo marca como oficial automáticamente.</p>
-    <input class="search" id="radioSource" placeholder="Emisora, red o indicativo escuchado">
-    <input class="search" id="radioFrequency" placeholder="Frecuencia / canal (ej. 146.520 MHz)">
-    <textarea id="radioMessage" placeholder="Anota el mensaje tal como se escuchó, lugar, hora y detalles..." style="min-height:110px"></textarea>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-     <button class="btn" onclick="saveRadioLog()">GUARDAR COMUNICADO</button>
-     <button class="btn secondary" onclick="copyLatestRadioLog()">COPIAR ÚLTIMO COMUNICADO</button>
-    </div>
-    <div id="radioLogs" class="tile-list"></div>
-   </div>
-  </div>
- </section>
  <section id="assistant" class="section">
   <div class="section-title"><h2>Asistente de conocimiento</h2><p>Conecta con un modelo de IA que se ejecuta en tu propio equipo.</p></div>
   <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><h3>IA local · Ollama + Qdrant</h3><p id="aiStatus">Buscando servicios locales...</p></div><span class="tag" id="aiTag">RAG LOCAL</span></div><div class="chatbox" id="chatbox"><div class="bubble ai">Soy el asistente local de SURVIVAL. Cuando el servidor esté activo, podré responder usando los documentos que incorpores a tu biblioteca.</div></div><div class="chatrow"><input id="chatInput" placeholder="Pregunta sobre tus documentos..." onkeydown="if(event.key==='Enter')sendChat()"><button class="btn" onclick="sendChat()">Enviar</button></div><div class="notice">Las preguntas se procesan en tu equipo con Ollama. Qdrant almacena vectores de tus documentos para recuperar fragmentos relevantes antes de generar cada respuesta.</div></div>
@@ -211,7 +145,7 @@ input,textarea,.search{font-size:16px;min-height:50px}
   <div class="grid">
    <div class="card half"><h3>Generador de hash SHA-256</h3><p>Calcula una huella digital de texto.</p><textarea id="hashInput" placeholder="Escribe o pega texto aquí..." style="min-height:95px;margin-top:12px"></textarea><button class="btn" style="margin-top:10px" onclick="makeHash()">Calcular SHA-256</button><div class="tool-output" id="hashOutput"></div></div>
    <div class="card half"><h3>Codificar / decodificar Base64</h3><p>Transforma texto localmente.</p><textarea id="baseInput" placeholder="Texto..." style="min-height:95px;margin-top:12px"></textarea><div style="display:flex;gap:8px;margin-top:10px"><button class="btn" onclick="base64('encode')">Codificar</button><button class="btn secondary" onclick="base64('decode')">Decodificar</button></div><div class="tool-output" id="baseOutput"></div></div>
-   <div class="card half"><h3>Checklist de preparación</h3><p>Marca elementos y quedan guardados en este dispositivo.</p><div class="tile-list" id="checklist"><label class="tile"><input type="checkbox" data-check="agua"> Agua almacenada</label><label class="tile"><input type="checkbox" data-check="botiquin"> Botiquín revisado</label><label class="tile"><input type="checkbox" data-check="linterna"> Linterna y baterías</label><label class="tile"><input type="checkbox" data-check="radio"> Radio / comunicación</label><label class="tile"><input type="checkbox" data-check="mapas"> Mapas offline descargados</label></div></div>
+   <div class="card half"><h3>Checklist de preparación</h3><p>Marca elementos y quedan guardados en este dispositivo.</p><div class="tile-list" id="checklist"><label class="tile"><input type="checkbox" data-check="agua"> Agua almacenada</label><label class="tile"><input type="checkbox" data-check="botiquin"> Botiquín revisado</label><label class="tile"><input type="checkbox" data-check="linterna"> Linterna y baterías</label><label class="tile"><input type="checkbox" data-check="mapas"> Mapas offline descargados</label></div></div>
    <div class="card half"><h3>Recursos de emergencia</h3><p>Guarda contactos y protocolos locales antes de necesitarlos.</p><div class="tile-list"><div class="tile"><div class="tile-icon">🚑</div><div><strong>Chile — SAMU</strong><small>131 · Ambulancia</small></div></div><div class="tile"><div class="tile-icon">🚒</div><div><strong>Chile — Bomberos</strong><small>132 · Incendios y rescate</small></div></div><div class="tile"><div class="tile-icon">🚓</div><div><strong>Chile — Carabineros</strong><small>133 · Emergencias policiales</small></div></div></div></div>
   </div>
  </section>
@@ -242,7 +176,7 @@ function initSurvivalMap(){
 function setChileView(){if(!survivalMap)initSurvivalMap();if(survivalMap)survivalMap.setView([-35.6751,-71.543],4)}
 function setCentralView(){if(!survivalMap)initSurvivalMap();if(survivalMap)survivalMap.setView([-33.45,-70.66],6)}
 
-const titles={mesh:"Chat cercano",home:"SURVIVAL",library:"Biblioteca",maps:"Mapas y orientación",radio:"Radio de emergencia",assistant:"Asistente IA",tools:"Herramientas",notes:"Notas personales",system:"Sistema"};
+const titles={mesh:"Chat cercano",home:"SURVIVAL",library:"Biblioteca",maps:"Mapas y orientación",assistant:"Asistente IA",tools:"Herramientas",notes:"Notas personales",system:"Sistema"};
 function go(page){document.querySelectorAll(".section").forEach(s=>s.classList.toggle("active",s.id===page));document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));document.getElementById("pageTitle").textContent=titles[page]||"SURVIVAL";window.scrollTo(0,0)}
 document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
 
@@ -297,14 +231,6 @@ function openLocalService(port){if(location.port!=="8788"){alert("Abre SURVIVAL 
 async function indexKnowledge(){const title=document.getElementById("docTitle").value.trim()||"Documento personal",textValue=document.getElementById("docText").value.trim(),status=document.getElementById("indexStatus");if(textValue.length<40){status.textContent="Agrega al menos 40 caracteres.";return}status.textContent="Dividiendo e indexando documento en Qdrant...";try{const r=await fetch("/api/knowledge/index",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title,text:textValue})});const d=await r.json();if(!r.ok)throw new Error(d.error||"No se pudo indexar");status.textContent="Documento guardado: "+d.title+" · "+d.chunks+" fragmentos indexados.";document.getElementById("docText").value=""}catch(e){status.textContent="Error: "+e.message}}
 async function sendChat(){let input=document.getElementById("chatInput"),q=input.value.trim();if(!q)return;let box=document.getElementById("chatbox");box.insertAdjacentHTML("beforeend",'<div class="bubble user">'+esc(q)+'</div>');input.value="";let wait=document.createElement("div");wait.className="bubble ai";wait.textContent="Buscando en tus documentos y consultando la IA local...";box.appendChild(wait);box.scrollTop=box.scrollHeight;try{const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:q})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Servidor no disponible");wait.textContent=(d.reply||"Sin respuesta")+(d.sources?.length?"\n\nDocumentos consultados: "+d.sources.map(x=>x.title).filter(Boolean).join(", "):"\n\nNo se encontraron fragmentos relevantes en la memoria documental.")}catch(e){wait.textContent="No se pudo conectar con la IA local. Abre SURVIVAL desde el PC o la red local donde corre Docker. "+e.message}box.scrollTop=box.scrollHeight}
 
-const radioLogKey="survival-radio-log-v1";
-function getRadioLogs(){try{return JSON.parse(localStorage.getItem(radioLogKey)||"[]")}catch{return[]}}
-function renderRadioLogs(){const el=document.getElementById("radioLogs");if(!el)return;const rows=getRadioLogs();el.innerHTML=rows.map((r,i)=>'<article class="tile"><div class="tile-icon">📻</div><div style="min-width:0;flex:1"><strong>'+esc(r.source||"Fuente no indicada")+' · '+esc(r.frequency||"Frecuencia no indicada")+'</strong><small>'+esc(new Date(r.time).toLocaleString())+' · '+esc(r.message)+'</small><small>Estado: no verificado oficialmente</small></div><button class="btn ghost" onclick="deleteRadioLog('+i+')">✕</button></article>').join("")||'<p class="muted">Todavía no hay comunicados guardados.</p>'}
-function saveRadioLog(){const source=document.getElementById("radioSource").value.trim(),frequency=document.getElementById("radioFrequency").value.trim(),message=document.getElementById("radioMessage").value.trim();if(!message){alert("Escribe el comunicado escuchado antes de guardarlo.");return}const rows=getRadioLogs();rows.unshift({source,frequency,message,time:new Date().toISOString(),verified:false});localStorage.setItem(radioLogKey,JSON.stringify(rows.slice(0,100)));document.getElementById("radioMessage").value="";renderRadioLogs()}
-function deleteRadioLog(i){const rows=getRadioLogs();rows.splice(i,1);localStorage.setItem(radioLogKey,JSON.stringify(rows));renderRadioLogs()}
-function copyLatestRadioLog(){const r=getRadioLogs()[0];if(!r){alert("Todavía no hay comunicados guardados.");return}const value="COMUNICADO ESCUCHADO (NO VERIFICADO)\\nFuente: "+r.source+"\\nFrecuencia: "+r.frequency+"\\nHora de recepción: "+new Date(r.time).toLocaleString()+"\\nMensaje: "+r.message;navigator.clipboard?.writeText(value).then(()=>alert("Comunicado copiado. Verifica la información antes de retransmitirla.")).catch(()=>alert(value))}
-function checkRadioSupport(){const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent),isAndroid=/Android/i.test(navigator.userAgent);const type=isIOS?"iPhone/iPad":isAndroid?"Android":"otro dispositivo";document.getElementById("radioHardware").textContent="● HARDWARE NO VERIFICABLE";document.getElementById("radioSupportText").textContent="Dispositivo detectado: "+type+". La web no puede consultar el chip FM ni controlar un sintonizador. Revisa si el fabricante incluye una app FM nativa y si el manual confirma chip FM. Si no existe, usa una radio AM/FM/SW independiente."}
-function copyRadioChecklist(){const value="KIT DE RADIO SURVIVAL\\n- Radio portátil AM/FM/SW con pilas o manivela.\\n- Auriculares con cable si el receptor FM del teléfono los necesita como antena.\\n- Pilas de repuesto y cable de carga.\\n- Frecuencias y contactos de redes locales anotados en papel.\\n- No depender del teléfono como único receptor.";navigator.clipboard?.writeText(value).then(()=>alert("Lista copiada.")).catch(()=>alert(value))}
 function getMeshMessages(){try{return JSON.parse(localStorage.getItem("survival-mesh-log")||"[]")}catch{return[]}}
 function renderMesh(){const log=document.getElementById("meshLog");if(!log)return;const items=getMeshMessages();log.innerHTML=items.map(m=>'<div class="mesh-msg '+(m.mine?'mine':'')+'"><span class="meta">'+esc(m.from)+' · '+new Date(m.time).toLocaleTimeString()+'</span>'+esc(m.text)+'</div>').join("")||'<div class="mesh-msg"><span class="meta">SYSTEM</span>Canal vacío. Envía un mensaje para guardar una nota local.</div>';log.scrollTop=log.scrollHeight}
 function saveMesh(textValue,alert=false){const items=getMeshMessages();items.push({from:"ESTE DISPOSITIVO"+(alert?" / ALERTA":""),text:textValue,mine:true,time:new Date().toISOString(),alert});localStorage.setItem("survival-mesh-log",JSON.stringify(items.slice(-250)));renderMesh()}
@@ -312,7 +238,7 @@ function sendMeshMessage(){const el=document.getElementById("meshInput"),v=el.va
 function sendMeshAlert(){saveMesh("ALERTA DE EMERGENCIA. Necesito asistencia. Este mensaje está guardado localmente; no se ha transmitido a otros teléfonos.",true)}
 function clearMeshLog(){if(confirm("¿Borrar el historial local de este dispositivo?")){localStorage.removeItem("survival-mesh-log");renderMesh()}}
 async function startMeshDiscovery(){const state=document.getElementById("meshState");state.textContent="● BLE NO DISPONIBLE EN WEB";document.getElementById("meshInfo").textContent="Para descubrir iPhone y Android cercanos se necesita la app nativa SURVIVAL con Bluetooth Low Energy. Esta página Cloudflare no tiene acceso a la radio BLE del sistema.";alert("El navegador web no permite implementar un chat BLE universal iPhone ↔ Android. La app nativa debe gestionar el escaneo y la conexión.");}
-const _go=go;go=function(page){_go(page);if(page==="mesh")renderMesh();if(page==="radio")renderRadioLogs();if(page==="maps"){initSurvivalMap();setTimeout(()=>survivalMap&&survivalMap.invalidateSize(),150)}};
+const _go=go;go=function(page){_go(page);if(page==="mesh")renderMesh();if(page==="maps"){initSurvivalMap();setTimeout(()=>survivalMap&&survivalMap.invalidateSize(),150)}};
 
 function net(){let on=navigator.onLine;document.getElementById("onlineText").textContent=on?"● En línea":"● Sin conexión";document.getElementById("netLabel").textContent=on?"Conectividad disponible":"Modo sin conexión";document.getElementById("sysNetwork").textContent=on?"Conectado a Internet":"Sin conexión a Internet"}
 document.querySelectorAll("[data-check]").forEach(el=>{el.checked=localStorage.getItem("survival-check-"+el.dataset.check)==="1";el.addEventListener("change",()=>localStorage.setItem("survival-check-"+el.dataset.check,el.checked?"1":"0"))});
