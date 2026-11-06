@@ -10,6 +10,7 @@ import com.getcapacitor.*
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
 import com.getcapacitor.annotation.PermissionCallback
+import com.getcapacitor.annotation.PermissionCallback
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -68,7 +69,7 @@ class SurvivalMeshPlugin : Plugin() {
             startAdvertising()
             startScanning()
             val ret = JSObject()
-            ret.put("deviceId", adapter.address ?: "android-device")
+            ret.put("deviceId", UUID.randomUUID().toString())
             ret.put("scanning", true); ret.put("advertising", true)
             call.resolve(ret)
         } catch (e: Exception) { call.reject("No se pudo iniciar BLE: ${e.message}") }
