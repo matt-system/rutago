@@ -1,43 +1,55 @@
-# MESHBIT Native — offline mesh client
+# MESHBIT Native — chat mesh local
 
-This is the native radio client for MESHBIT. The Worker-hosted PWA cannot provide reliable BLE discovery or multi-hop radio relay on iOS and Android; this Flutter app is the native implementation of that capability.
+Aplicación nativa Flutter para conversaciones locales sin Internet. El transporte MESH está limitado a **Bluetooth LE**: no usa Wi-Fi, router, datos móviles, servidores ni relays online.
 
-## Implemented in the native client
+## Funciones incluidas en esta versión
 
-- Nearby discovery and advertising through the `nearby` transport in **BLE-only mode**. The MESH radio path does not use Wi-Fi, a router, internet access, or mobile data.
-- Encrypted, PIN-verified peer sessions.
-- Application-layer store-and-forward relay: AES-256-GCM ciphertext packets are stored in SQLite and forwarded to connected peers.
-- Multi-hop forwarding with a maximum TTL of 12 and packet-ID deduplication.
-- Seven-day local packet retention.
-- A local inbox; only the intended recipient with the shared conversation key can decrypt. Sender and recipient IDs are inside the encrypted payload, not in the relay envelope.
-- No server, Wi-Fi connection, internet access, or mobile-data connection is required after installation to exchange packets locally. Bluetooth must be enabled and the MESH screen must remain open.
+- Descubrimiento y publicidad BLE con el teléfono actuando como nodo que puede recibir y enviar.
+- Sesiones punto a punto con cifrado del transporte y código PIN de verificación por sesión.
+- Canal común **#general**, protegido por una clave compartida de 256 bits.
+- Conversaciones privadas 1 a 1, sin teléfono, correo ni cuenta central.
+- Alias y directorio local de contactos; las claves se guardan mediante Keychain en iOS y el almacén cifrado del sistema en Android.
+- Sobres de mensajes cifrados con AES-256-GCM. El texto, alias, emisor y destinatario quedan dentro del ciphertext.
+- Retransmisión multi-salto por inundación controlada, TTL máximo de 7 saltos, deduplicación y exclusión del enlace de entrada.
+- Store-and-forward en SQLite: cada paquete queda guardado hasta 7 días y se reintenta al aparecer otro vecino. El registro de reenvío por vecino evita repetir continuamente el mismo paquete.
+- Bandeja local y conversación con dos modos de lectura: burbujas y terminal.
+- Pantalla de nodos cercanos, verificación de sesión y contador de conexiones.
+- La app mantiene la pantalla encendida durante una sesión MESH; aumenta el consumo de batería.
 
-## First-use flow
+## Primer uso
 
-1. Install MESHBIT Native on each phone and allow Bluetooth permissions.
-2. Open MESHBIT. The native app starts Bluetooth LE discovery and advertising automatically; keep the MESH screen open on all participating phones. **INICIAR MESH** remains available as a retry if Bluetooth permissions were denied.
-3. Connect nearby phones. Compare the session PIN shown on both screens before accepting.
-4. Share the recipient's **ID de este dispositivo** and the conversation key over a separate trusted channel. Generate one key and use the same 64-character hex key on both ends.
-5. For a multi-hop test, keep node B connected to A and C. Put A and C out of direct radio range, send from A to C, and leave B running as a relay. The packet remains queued on B and is forwarded when a peer/route becomes available.
+1. Instala MESHBIT en dos o más teléfonos. Activa Bluetooth y concede los permisos solicitados.
+2. Abre la app y deja la pantalla MESHBIT abierta. La búsqueda y publicidad Bluetooth se inician automáticamente.
+3. Para el canal común, abre el icono de llave de **#general** y comparte el código `MESH1:...` con quienes quieras incluir. Los participantes deben guardar la misma clave.
+4. Para un privado, comparte tu **ID MESH**. Añade el contacto con su ID, define o introduce una clave de 64 caracteres hexadecimales y guarda la misma clave en ambos teléfonos.
+5. Al conectar teléfonos cercanos, compara el PIN de ambos extremos antes de confirmar. Un vecino que no se haya verificado no puede retransmitir paquetes.
+6. Para probar varios saltos, deja el teléfono B conectado a A y C; separa A y C fuera de alcance directo. Un mensaje de A destinado a C puede atravesar B y permanecer guardado en los nodos intermedios.
 
-## Platform realities
+Las claves se deben compartir por un canal de confianza distinto de MESHBIT. El código QR para invitaciones y el intercambio autenticado de claves quedan para una siguiente versión.
 
-- Android APK builds are uploaded by GitHub Actions as the `meshbit-native-android-apk` artifact.
-- iOS support is included in the Flutter project and its Bluetooth/local-network usage declarations. A signed iPhone install/TestFlight release requires Apple signing credentials and a macOS build.
-- MESH is designed for foreground use. Keep the app open on all participating phones. This avoids relying on iOS background scanning or advertising; the app does not promise relay while closed or suspended.
-- The native app embeds the existing Worker-hosted chat in a separate **CHAT** screen; that screen needs internet. The **MESH** screen is native and works locally without internet or mobile data. The native client does not yet share the PWA identity vault or contacts.
-- The `nearby` transport is a young third-party dependency. CI compilation/unit checks are not proof of a successful multi-phone field test; radio behavior needs physical Android and iPhone testing.
+## Distribución fuera de las tiendas
 
-## Security notes
+- Android: GitHub Actions construye un APK de prueba y lo publica en una GitHub Release. Se instala directamente; no se publica en Google Play.
+- iOS: el proyecto compila sin firma en CI. Para instalar un IPA en iPhones se necesita firmarlo con un perfil/certificado válido y distribuirlo directamente; no requiere publicar en App Store.
+- Las pruebas de compilación no sustituyen pruebas físicas BLE entre varios teléfonos. Todavía hay que validar Android↔Android, iPhone↔iPhone y Android↔iPhone en campo.
 
-- Transport sessions use encrypted PIN-verification mode.
-- Message payloads use AES-256-GCM with a user-shared 32-byte conversation key.
-- Relays see packet ID, hop limit, nonce, authentication tag, ciphertext, and local storage timing; they do not see message text or sender/recipient IDs inside the ciphertext.
-- This is not an independently audited Signal-style protocol. Key exchange is manual and must use a trusted channel.
+## Límites de seguridad y funciones pendientes
 
+Esta versión ya transporta mensajes cifrados por una red BLE local, pero **no es aún equivalente a Bitchat ni está auditada**. Usa clave compartida manual y AES-GCM; aún no integra un protocolo de sesión tipo Noise XX/Double Ratchet, firmas independientes de cada emisor, recibos de entrega/lectura, adjuntos, notas de voz, canales geográficos ni un sistema de courier spray-and-wait. En el canal común, cualquier miembro que conozca la clave puede generar mensajes con el alias que elija.
 
-## Offline MESH versus online chat
+Los nodos intermedios ven metadatos mínimos de transporte (ID aleatorio de paquete, TTL, tamaño del ciphertext y momento local de recepción), pero no el texto ni el alias. La radio BLE permite inferir proximidad. No prometer anonimato absoluto ni usar esta beta para comunicaciones de alto riesgo.
 
-- **MESH** is the Bluetooth LE network and stays local. It works with no Wi-Fi and no 4G/5G, provided the participating phones have Bluetooth enabled and the app open.
-- **CHAT** opens the existing web chat in an embedded view and requires an internet connection. It is a separate screen; it is not used to relay offline MESH packets.
-- The BLE relay is a best-effort flooding mesh. Range depends on phones, surroundings, and BLE radio conditions; more participating phones can extend reach by forwarding packets.
+## Licencias y procedencia
+
+Meshbit tiene implementación independiente. No se ha copiado código fuente de Bitchat Android (GPL-3.0) ni del repositorio iOS/macOS de Bitchat (Unlicense). Ver [PROVENANCE.md](PROVENANCE.md). Los paquetes Flutter externos conservan las licencias que les corresponden, incluidas las BSD de `nearby` y `flutter_secure_storage`.
+
+## Compilar
+
+Desde esta carpeta:
+
+```bash
+flutter pub get
+flutter analyze
+flutter test
+flutter build apk --release
+```
