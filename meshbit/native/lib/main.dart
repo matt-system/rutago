@@ -180,7 +180,18 @@ class MeshEngine {
       if (bytes.length > 6200) return;
       final map = jsonDecode(utf8.decode(bytes)) as Map<String,dynamic>;
       final env = MeshEnvelope.fromJson(map);
-      if (_seen.contains(env.id) || env.ttl < 0) return;
+      final existing = await _db!.query('packets', where:'id=?', whereArgs:[env.id], limit:1);
+      if (_seen.contains(env.id)) {
+        if (existing.isNotEmpty && (existing.first['delivered'] as int) == 0 && env.ttl > 0) {
+          final saved = MeshEnvelope.fromJson(jsonDecode(existing.first['json'] as String));
+          final improved = env.forwarded();
+          if (improved.ttl > saved.ttl) {
+            await _db!.update('packets', {'json':jsonEncode(improved.toJson()),'created':DateTime.now().millisecondsSinceEpoch}, where:'id=?', whereArgs:[env.id]);
+            await _broadcast(improved);
+          }
+        }
+        return;
+      }
       _seen.add(env.id);
       final forwarded = env.ttl > 0 ? env.forwarded() : env;
       await _store(forwarded);
@@ -211,7 +222,7 @@ class MeshEngine {
     for (final row in rows) {
       try {
         final env = MeshEnvelope.fromJson(jsonDecode(row['json'] as String));
-        if (env.ttl >= 0) await _broadcast(env);
+        if (env.ttl > 0) await _broadcast(env);
       } catch (_) {}
     }
   }
