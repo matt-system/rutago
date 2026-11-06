@@ -13,6 +13,7 @@ import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 void main() => runApp(const MeshbitApp());
 
@@ -234,6 +235,39 @@ class MeshEngine {
   }
 }
 
+class MeshbitChatPage extends StatefulWidget {
+  const MeshbitChatPage({super.key});
+  @override
+  State<MeshbitChatPage> createState() => _MeshbitChatPageState();
+}
+
+class _MeshbitChatPageState extends State<MeshbitChatPage> {
+  late final WebViewController controller;
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageStarted: (_) { if (mounted) setState(() => loading = true); },
+        onPageFinished: (_) { if (mounted) setState(() => loading = false); },
+        onWebResourceError: (_) { if (mounted) setState(() => loading = false); },
+      ))
+      ..loadRequest(Uri.parse('https://meshbit.matthieupierremarie.workers.dev/app/'));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('CHAT MESHBIT')),
+    body: Stack(children:[
+      WebViewWidget(controller:controller),
+      if(loading) const LinearProgressIndicator(),
+    ]),
+  );
+}
+
 class MeshHome extends StatefulWidget {
   const MeshHome({super.key});
   @override State<MeshHome> createState() => _MeshHomeState();
@@ -252,7 +286,7 @@ class _MeshHomeState extends State<MeshHome> {
   @override void dispose() { destination.dispose(); body.dispose(); key.dispose(); engine.dispose(); super.dispose(); }
   void notice(String s) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s))); }
   @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('MESHBIT',style:TextStyle(letterSpacing:4,fontWeight:FontWeight.w800)),actions:[Padding(padding:const EdgeInsets.only(right:16),child:Center(child:Text(engine.running?'MESH ACTIVO':'OFFLINE',style:TextStyle(color:engine.running?Colors.lightGreenAccent:Colors.white54,fontSize:11,letterSpacing:1.5))))]),
+    appBar: AppBar(title: const Text('MESHBIT',style:TextStyle(letterSpacing:4,fontWeight:FontWeight.w800)),actions:[IconButton(tooltip:'Abrir chat de Meshbit (requiere internet)',icon:const Icon(Icons.chat_bubble_outline),onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const MeshbitChatPage()))),Padding(padding:const EdgeInsets.only(right:16),child:Center(child:Text(engine.running?'MESH ACTIVO':'OFFLINE',style:TextStyle(color:engine.running?Colors.lightGreenAccent:Colors.white54,fontSize:11,letterSpacing:1.5))))]),
     body: ListView(padding:const EdgeInsets.all(18),children:[
       Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:const Color(0xff1b241e),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xff35483a))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         const Text('RED LOCAL',style:TextStyle(color:Color(0xffa8c5ac),letterSpacing:2,fontSize:11)),
