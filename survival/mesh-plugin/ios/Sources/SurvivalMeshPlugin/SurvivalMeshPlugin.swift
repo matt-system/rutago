@@ -54,7 +54,7 @@ public class SurvivalMeshPlugin: CAPPlugin, CAPBridgedPlugin, CBCentralManagerDe
         var sent = 0
         for (id, characteristic) in characteristics {
             if let target = peers[id], target.state == .connected {
-                guard data.count <= target.maximumWriteValueLength(for: .withoutResponse) else { continue }
+                guard target.canSendWriteWithoutResponse, data.count <= target.maximumWriteValueLength(for: .withoutResponse) else { continue }
                 target.writeValue(data, for: characteristic, type: .withoutResponse); sent += 1
             }
         }
