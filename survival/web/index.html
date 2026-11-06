@@ -16,13 +16,32 @@ body{background:#080d0a;background-image:linear-gradient(#14221922 1px,transpare
 .side{background:#080e0a}.card{background:#0c1510;border-radius:8px;box-shadow:none}.hero:after{border-radius:8px;opacity:.28}.brandmark{border-radius:5px}.nav button{border-radius:5px}.nav button.active,.nav button:hover{background:#14271a;color:#b9e7ad;outline:1px solid #31513a}.btn{border-radius:5px;background:#9bcf8e}.btn.secondary{border-radius:5px;background:#122018}.btn.ghost{border-radius:5px}.status,.tag{border-radius:4px}.tile,.book,.chatbox,.search,textarea,.chatrow input{border-radius:5px}.book-grid{grid-template-columns:repeat(3,1fr)}.eyebrow,.nav-label,.label{letter-spacing:.12em}
 .terminal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:0 0 12px;margin-bottom:14px;color:var(--green);font-size:11px;letter-spacing:.1em}.terminal-status{color:#88b68a;font-size:10px}.mesh-device{display:flex;justify-content:space-between;align-items:center;padding:11px;border:1px solid var(--line);background:#0b130e;margin-top:8px;font-size:11px}.mesh-device small{display:block;color:var(--muted);margin-top:4px}.mesh-log{height:310px;overflow:auto;background:#060a07;border:1px solid #26392b;padding:12px;display:flex;flex-direction:column;gap:9px;font-size:11px}.mesh-msg{max-width:88%;padding:9px 11px;border-left:2px solid #79a779;background:#101c13;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.mesh-msg.mine{align-self:flex-end;border-left:0;border-right:2px solid #b1d89e;background:#142319}.mesh-msg .meta{display:block;color:#7f9984;font-size:9px;margin-bottom:4px}.mesh-compose{display:flex;gap:8px;margin-top:10px}.mesh-compose input{min-width:0;flex:1;background:#060a07;border:1px solid var(--line);color:var(--text);padding:12px;border-radius:5px}.mesh-warning{padding:11px;border:1px solid #65552c;background:#1b180e;color:#d9c58f;font-size:10px;line-height:1.6;margin-top:12px}
 @media(max-width:900px){.book-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* Accesibilidad: controles grandes, lectura clara y modo sencillo */
+html{font-size:16px}body{font-size:16px;line-height:1.6}.main{min-width:0}
+p,.muted,.notice,.card p{font-size:15px;line-height:1.65}
+button,.btn,.nav button{min-height:48px;font-size:14px;font-weight:700;touch-action:manipulation}
+input,textarea,.search{font-size:16px;min-height:50px}
+.section-title h2{font-size:clamp(24px,3vw,32px)}.section-title p{font-size:16px}
+.book-grid{grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.book{padding:18px;border:1px solid var(--line);border-radius:8px;background:#0c1510;min-height:190px;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.book strong{font-size:17px;line-height:1.35}.book p{font-size:14px;flex:1}.book .btn{width:100%;margin-top:4px}
+.quick-survival{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.quick-guide{background:#101b14;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:14px;min-height:142px;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:7px}
+.quick-guide span{font-size:28px}.quick-guide b{font-size:13px;color:var(--green)}.quick-guide small{font-size:12px;line-height:1.4;color:var(--muted)}
+.library-label{display:block;font-weight:800;font-size:17px;margin:16px 0 8px}.guide-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.guide-toolbar h3{font-size:23px;margin:5px 0}.guide-toolbar p{margin:0}.guide-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.guide-body{font-size:17px;line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere;color:#e4eee3;border-top:1px solid var(--line);padding-top:16px}
+.guide-sources{display:flex;flex-direction:column;gap:8px;margin:16px 0}.guide-sources a{color:#b8dda9;font-size:14px;overflow-wrap:anywhere}
+.easy-toggle{white-space:nowrap}.easy-mode{font-size:20px!important}.easy-mode p,.easy-mode .muted,.easy-mode .notice,.easy-mode .book p{font-size:18px!important;line-height:1.8!important}.easy-mode button,.easy-mode .btn{font-size:17px!important;min-height:58px!important}.easy-mode .book strong{font-size:20px!important}.easy-mode .guide-body{font-size:21px!important;line-height:1.9!important}.easy-mode .nav button{font-size:17px!important}
+@media(max-width:900px){.quick-survival{grid-template-columns:repeat(2,minmax(0,1fr))}.topright{gap:6px}.easy-toggle{font-size:11px!important;padding:8px}}
+@media(max-width:520px){.quick-guide{min-height:128px;padding:12px}.book-grid{grid-template-columns:1fr}.guide-toolbar{flex-direction:column}.guide-toolbar .btn{width:100%}.topright .status{display:none}}
 </style>
 </head>
 <body>
 <div class="shell">
 <aside class="side">
  <div class="brand"><div class="brandmark">S</div><div><strong>SURVIVAL</strong><small>OFFLINE KNOWLEDGE SYSTEM</small></div></div>
- <div><p class="nav-label">CENTRO DE MANDO</p><nav class="nav">
+ <div><p class="nav-label">SURVIVAL</p><nav class="nav">
   <button class="active" data-page="home"><span class="ico">⌂</span>Inicio</button>
   <button data-page="library"><span class="ico">▤</span>Biblioteca</button>
   <button data-page="maps"><span class="ico">⌖</span>Mapas</button>
@@ -34,7 +53,7 @@ body{background:#080d0a;background-image:linear-gradient(#14221922 1px,transpare
  <div class="side-foot"><span class="dot"></span><b id="netLabel">Comprobando conexión</b><br>Tu espacio de conocimiento personal. Los datos guardados localmente permanecen en este dispositivo.</div>
 </aside>
 <main class="main">
- <header class="top"><div><div class="eyebrow">KNOWLEDGE THAT STAYS</div><h1 id="pageTitle">SURVIVAL</h1></div><div class="topright"><div class="status"><b id="onlineText">● En línea</b></div><div class="avatar">SV</div></div></header>
+ <header class="top"><div><div class="eyebrow">KNOWLEDGE THAT STAYS</div><h1 id="pageTitle">SURVIVAL</h1></div><div class="topright"><button class="btn secondary easy-toggle" id="easyModeBtn" onclick="toggleEasyMode()" aria-pressed="false">A+ TEXTO GRANDE</button><div class="status"><b id="onlineText">● En línea</b></div><div class="avatar">SV</div></div></header>
  <section id="home" class="section active">
   <div class="grid">
    <article class="card hero"><span class="tag">TU CENTRO DE PREPARACIÓN</span><h2>El conocimiento no debería depender de Internet.</h2><p>Una base personal para aprender, prepararte y mantener a mano información esencial, incluso cuando no hay conexión.</p><button class="btn" onclick="go('library')">Explorar biblioteca →</button></article>
@@ -53,19 +72,29 @@ body{background:#080d0a;background-image:linear-gradient(#14221922 1px,transpare
   </div>
  </section>
  <section id="library" class="section">
-  <div class="section-title"><h2>Biblioteca de conocimiento</h2><p>Guías de referencia integradas y recursos para ampliar tu archivo personal.</p></div>
-  <input class="search" id="libSearch" placeholder="Buscar guías y temas..." oninput="filterBooks()">
-  <div class="book-grid" id="bookGrid">
-   <article class="book" data-terms="primeros auxilios salud emergencia"><div class="emoji">🩹</div><strong>Primeros auxilios</strong><p>Evaluación inicial, hemorragias, quemaduras y respuesta básica.</p><button class="btn secondary" onclick="openGuide('firstaid')">Abrir guía</button></article>
-   <article class="book" data-terms="agua potabilizar filtro hidratacion"><div class="emoji">💧</div><strong>Agua segura</strong><p>Almacenamiento, filtrado y desinfección del agua.</p><button class="btn secondary" onclick="openGuide('water')">Abrir guía</button></article>
-   <article class="book" data-terms="refugio abrigo frio calor"><div class="emoji">⛺</div><strong>Refugio y clima</strong><p>Protección térmica, refugio y prevención de hipotermia.</p><button class="btn secondary" onclick="openGuide('shelter')">Abrir guía</button></article>
-   <article class="book" data-terms="alimentos comida conservacion"><div class="emoji">🥫</div><strong>Alimentos</strong><p>Reserva, conservación e higiene alimentaria.</p><button class="btn secondary" onclick="openGuide('food')">Abrir guía</button></article>
-   <article class="book" data-terms="energia electricidad baterias solar"><div class="emoji">🔋</div><strong>Energía básica</strong><p>Baterías, consumo, paneles y respaldo.</p><button class="btn secondary" onclick="openGuide('energy')">Abrir guía</button></article>
-   <article class="book" data-terms="orientacion navegacion mapa brújula"><div class="emoji">🧭</div><strong>Orientación</strong><p>Lectura de mapas, brújula y planificación.</p><button class="btn secondary" onclick="openGuide('navigation')">Abrir guía</button></article>
+  <div class="section-title"><h2>Biblioteca para sobrevivir</h2><p>Guías prácticas, paso a paso. Todo el contenido principal se guarda para consultarlo sin Internet.</p></div>
+  <div class="card" style="margin-bottom:16px">
+   <div class="terminal-head"><span>/// EMPIEZA POR AQUÍ</span><span class="terminal-status">PRIORIDAD</span></div>
+   <div class="quick-survival">
+    <button class="quick-guide" onclick="openGuide('agua')"><span>💧</span><b>AGUA SEGURA</b><small>Cómo limpiar y desinfectar agua</small></button>
+    <button class="quick-guide" onclick="openGuide('hacer-fuego')"><span>🔥</span><b>HACER FUEGO</b><small>Encenderlo y apagarlo sin riesgos</small></button>
+    <button class="quick-guide" onclick="openGuide('apagones')"><span>🔦</span><b>APAGÓN</b><small>Qué hacer cuando se corta la luz</small></button>
+    <button class="quick-guide" onclick="openGuide('kit-hogar')"><span>🎒</span><b>QUÉ NECESITO</b><small>Preparar la casa y la mochila</small></button>
+   </div>
   </div>
-  <div id="guidePanel" class="card" style="display:none;margin-top:16px"><div style="display:flex;justify-content:space-between;align-items:center"><h3 id="guideTitle">Guía</h3><button class="btn ghost" onclick="closeGuide()">Cerrar</button></div><div id="guideBody" style="font-size:12px;line-height:1.7;color:#c3d0c4"></div></div>
-  <div class="notice">Estas fichas son material introductorio, no sustituyen formación profesional ni instrucciones de servicios de emergencia. En una emergencia real, contacta a los servicios locales cuando sea posible.</div>
-  <div class="card" style="margin-top:16px"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><h3>Biblioteca offline · Kiwix</h3><p id="kiwixStatus">Servidor Kiwix: comprobando...</p></div><span class="tag">ZIM / OFFLINE</span></div><p style="margin-top:10px">Cuando agregues archivos .zim a la carpeta data/zim del servidor, Kiwix los publicará aquí para leerlos sin conexión.</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn" onclick="openLocalService(8081)">Abrir biblioteca Kiwix</button><a class="btn secondary" href="https://library.kiwix.org/" target="_blank" rel="noreferrer">Catálogo de contenidos ↗</a></div><div class="notice">Los archivos ZIM no se incluyen en GitHub porque pueden ocupar varios GB. Descarga los que necesites desde el catálogo y colócalos en survival/data/zim.</div></div>
+  <label class="library-label" for="libSearch">¿Qué necesitas aprender?</label>
+  <input class="search" id="libSearch" placeholder="Ej.: agua, fuego, terremoto, comida..." oninput="filterBooks()" aria-label="Buscar en la biblioteca">
+  <p class="muted" id="libraryCount" aria-live="polite">Cargando guías...</p>
+  <div class="book-grid" id="bookGrid"><div class="card">Preparando la biblioteca...</div></div>
+  <div id="guidePanel" class="card guide-panel" style="display:none;margin-top:18px">
+   <div class="guide-toolbar"><div><div class="eyebrow" id="guideCategory">GUÍA PRÁCTICA</div><h3 id="guideTitle">Guía</h3><p id="guideSummary"></p></div><button class="btn secondary" onclick="closeGuide()">CERRAR ✕</button></div>
+   <div class="guide-actions"><button class="btn" onclick="readGuideAloud()">🔊 LEER EN VOZ ALTA</button><button class="btn secondary" onclick="stopGuideAloud()">DETENER VOZ</button></div>
+   <div id="guideBody" class="guide-body"></div>
+   <div id="guideSources" class="guide-sources"></div>
+   <div class="notice">Lee las advertencias y sigue las instrucciones de las autoridades. Esta guía es educativa y no sustituye servicios de emergencia ni formación profesional.</div>
+  </div>
+  <div class="notice">La biblioteca incluye fichas descargables en esta app. Para actualizar contenidos o abrir enlaces externos necesitarás conexión. Antes de una emergencia, abre la app una vez con Internet para que se guarden los contenidos.</div>
+  <div class="card" style="margin-top:16px"><div class="terminal-head"><span>/// BIBLIOTECA AMPLIADA</span><span class="terminal-status">KIWIX / ZIM</span></div><h3>Enciclopedias y manuales completos</h3><p id="kiwixStatus">Servidor Kiwix: comprobando...</p><p>Si instalas archivos ZIM en el servidor local, podrás consultar enciclopedias y manuales completos sin Internet.</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn" onclick="openLocalService(8081)">ABRIR KIWIX</button><a class="btn secondary" href="https://library.kiwix.org/" target="_blank" rel="noreferrer">VER CATÁLOGO ↗</a></div></div>
  </section>
  <section id="maps" class="section">
   <div class="section-title"><h2>Mapas y orientación</h2><p>Consulta cartografía online y prepara tus mapas regionales para uso sin conexión.</p></div>
@@ -123,17 +152,47 @@ body{background:#080d0a;background-image:linear-gradient(#14221922 1px,transpare
 const titles={mesh:"Chat cercano",home:"SURVIVAL",library:"Biblioteca",maps:"Mapas y orientación",assistant:"Asistente IA",tools:"Herramientas",notes:"Notas personales",system:"Sistema"};
 function go(page){document.querySelectorAll(".section").forEach(s=>s.classList.toggle("active",s.id===page));document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));document.getElementById("pageTitle").textContent=titles[page]||"SURVIVAL";window.scrollTo(0,0)}
 document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
-const guides={
-firstaid:["Primeros auxilios","<p><b>1. Seguridad:</b> comprueba que el lugar sea seguro antes de acercarte.</p><p><b>2. Respuesta:</b> verifica si la persona responde y respira normalmente. Pide ayuda y activa emergencias (SAMU 131 en Chile).</p><p><b>3. Hemorragias:</b> aplica presión directa firme con una tela o gasa limpia. No retires objetos incrustados.</p><p><b>4. Quemaduras:</b> enfría con agua corriente fresca durante 20 minutos. No uses hielo, aceites ni remedios caseros.</p><p><b>5. No mover:</b> evita mover a una persona con posible lesión de columna salvo peligro inmediato.</p><p>Realiza un curso certificado de primeros auxilios. Esta guía no sustituye entrenamiento ni asistencia médica.</p>"],
-water:["Agua segura","<p>Prioriza agua embotellada o de una fuente oficialmente segura. Almacena en recipientes limpios, aptos para alimentos y bien cerrados.</p><p>Si el agua es turbia, deja sedimentar y filtra con un paño limpio o filtro adecuado antes de desinfectar.</p><p><b>Hervido:</b> lleva el agua a hervor vigoroso durante 1 minuto (3 minutos sobre 2.000 m de altitud). Deja enfriar y almacena tapada.</p><p>El hervido no elimina contaminantes químicos, combustibles ni metales pesados. Ante sospecha de contaminación química, no la consumas.</p>"],
-shelter:["Refugio y clima","<p>Mantén ropa seca y utiliza capas. Aísla el cuerpo del suelo con material seco. Protege cabeza, manos y pies.</p><p>La hipotermia puede ocurrir incluso con temperaturas moderadas si hay viento y ropa mojada. Busca atención urgente ante confusión, somnolencia intensa o pérdida de coordinación.</p><p>En calor extremo, busca sombra, reduce actividad y bebe agua regularmente. Nunca dejes personas o animales dentro de vehículos cerrados.</p>"],
-food:["Alimentos","<p>Prioriza alimentos no perecibles, agua segura y una rotación por fecha de vencimiento. Mantén latas y envases lejos de calor, humedad y plagas.</p><p>No consumas latas hinchadas, con fugas, óxido profundo o mal olor. No pruebes alimentos para comprobar si están contaminados.</p><p>Separa alimentos crudos de los listos para comer y lávate las manos con agua segura.</p>"],
-energy:["Energía básica","<p>Calcula energía: Wh = voltaje (V) × capacidad (Ah). Considera pérdidas del inversor y evita descargar baterías más allá de lo recomendado por el fabricante.</p><p>Usa fusibles adecuados cerca de la batería, cables dimensionados correctamente y ventilación. No manipules instalaciones de red eléctrica sin personal calificado.</p><p>Nunca uses generadores, braseros o motores de combustión dentro de espacios cerrados: el monóxido de carbono puede ser mortal.</p>"],
-navigation:["Orientación","<p>Antes de salir, define destino, ruta alternativa, hora de regreso y punto de encuentro. Comparte el plan con alguien.</p><p>Aprende a orientar un mapa con brújula y a reconocer curvas de nivel, escala, norte y coordenadas. Lleva respaldo físico si dependes de un teléfono.</p><p>No confíes exclusivamente en el GPS: puede quedarse sin batería, señal o mapas.</p>"]
-};
-function openGuide(id){let g=guides[id];if(!g)return;document.getElementById("guideTitle").textContent=g[0];document.getElementById("guideBody").innerHTML=g[1];document.getElementById("guidePanel").style.display="block";document.getElementById("guidePanel").scrollIntoView({behavior:"smooth",block:"start"})}
-function closeGuide(){document.getElementById("guidePanel").style.display="none"}
-function filterBooks(){let q=document.getElementById("libSearch").value.toLowerCase();document.querySelectorAll(".book[data-terms]").forEach(b=>b.style.display=(b.dataset.terms+" "+b.innerText).toLowerCase().includes(q)?"block":"none")}
+
+let knowledgeItems=[];
+let currentGuide=null;
+async function loadKnowledge(){
+ const cached=localStorage.getItem("survival-knowledge-cache");
+ try{
+  const response=await fetch("/knowledge.json",{cache:"no-store"});
+  if(!response.ok)throw new Error("No se pudo descargar la biblioteca");
+  const data=await response.json();
+  if(!Array.isArray(data))throw new Error("Formato de biblioteca inválido");
+  knowledgeItems=data;
+  localStorage.setItem("survival-knowledge-cache",JSON.stringify(data));
+ }catch(error){
+  try{knowledgeItems=JSON.parse(cached||"[]")}catch{knowledgeItems=[]}
+ }
+ renderKnowledgeLibrary();
+}
+function renderKnowledgeLibrary(list=knowledgeItems){
+ const grid=document.getElementById("bookGrid");if(!grid)return;
+ const priority=["agua","hacer-fuego","apagones","kit-hogar","terremotos-tsunami","primeros-auxilios"];
+ const sorted=[...list].sort((a,b)=>{const ai=priority.indexOf(a.id),bi=priority.indexOf(b.id);return (ai<0?99:ai)-(bi<0?99:bi)||a.title.localeCompare(b.title,"es")});
+ grid.innerHTML=sorted.map(item=>'<article class="book"><div class="eyebrow">'+esc(item.category||"GUÍA")+'</div><div class="emoji">'+(item.id==="agua"?"💧":item.id==="hacer-fuego"?"🔥":item.id==="apagones"?"🔦":item.id==="kit-hogar"?"🎒":item.id.includes("tsunami")||item.id.includes("terremoto")?"🌊":item.id.includes("auxilios")?"🩹":"📘")+'</div><strong>'+esc(item.title)+'</strong><p>'+esc(item.summary||"Guía de consulta práctica.")+'</p><button class="btn secondary" onclick="openGuide(\''+esc(item.id)+'\')">ABRIR GUÍA →</button></article>').join("")||'<div class="card">No se encontraron guías. Prueba otra palabra.</div>';
+ const count=document.getElementById("libraryCount");if(count)count.textContent=sorted.length+" guías disponibles en este dispositivo";
+}
+function filterBooks(){const q=(document.getElementById("libSearch").value||"").toLowerCase().trim();const filtered=knowledgeItems.filter(x=>(x.title+" "+x.category+" "+x.summary+" "+(x.tags||[]).join(" ")+" "+x.body).toLowerCase().includes(q));renderKnowledgeLibrary(filtered)}
+function openGuide(id){
+ const item=knowledgeItems.find(x=>x.id===id);if(!item)return;
+ currentGuide=item;
+ document.getElementById("guideTitle").textContent=item.title;
+ document.getElementById("guideCategory").textContent=item.category||"GUÍA PRÁCTICA";
+ document.getElementById("guideSummary").textContent=item.summary||"";
+ document.getElementById("guideBody").textContent=item.body||"Contenido no disponible.";
+ const src=document.getElementById("guideSources");
+ src.innerHTML=(item.sources||[]).map(s=>'<a href="'+esc(s.url)+'" target="_blank" rel="noreferrer">FUENTE: '+esc(s.label)+' ↗</a>').join("");
+ const panel=document.getElementById("guidePanel");panel.style.display="block";panel.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeGuide(){stopGuideAloud();document.getElementById("guidePanel").style.display="none"}
+function readGuideAloud(){if(!currentGuide||!("speechSynthesis" in window)){alert("La lectura en voz alta no está disponible en este navegador.");return}stopGuideAloud();const utterance=new SpeechSynthesisUtterance(currentGuide.title+". "+currentGuide.body);utterance.lang="es-CL";utterance.rate=document.body.classList.contains("easy-mode")?0.82:0.95;window.speechSynthesis.speak(utterance)}
+function stopGuideAloud(){if("speechSynthesis" in window)window.speechSynthesis.cancel()}
+function toggleEasyMode(){const on=document.body.classList.toggle("easy-mode");localStorage.setItem("survival-easy-mode",on?"1":"0");const b=document.getElementById("easyModeBtn");b.textContent=on?"A− TEXTO NORMAL":"A+ TEXTO GRANDE";b.setAttribute("aria-pressed",on?"true":"false")}
+function restoreEasyMode(){if(localStorage.getItem("survival-easy-mode")==="1"){document.body.classList.add("easy-mode");const b=document.getElementById("easyModeBtn");if(b){b.textContent="A− TEXTO NORMAL";b.setAttribute("aria-pressed","true")}}}
 function getNotes(){try{return JSON.parse(localStorage.getItem("survival-notes")||"[]")}catch{return[]}}
 function renderNotes(){let ns=getNotes();document.getElementById("noteCount").textContent=ns.length;document.getElementById("notesList").innerHTML=ns.map((n,i)=>'<div class="tile"><div class="tile-icon">📝</div><div style="min-width:0;flex:1"><strong>'+esc(n.title)+'</strong><small>'+esc(n.body.slice(0,110))+'</small></div><button class="btn ghost" onclick="deleteNote('+i+')">✕</button></div>').join("")||'<p class="muted">Todavía no hay notas guardadas.</p>'}
 function saveNote(){let title=document.getElementById("noteTitle").value.trim()||"Nota sin título",body=document.getElementById("noteBody").value.trim();if(!body){alert("Escribe algo antes de guardar.");return}let ns=getNotes();ns.unshift({title,body,date:new Date().toISOString()});localStorage.setItem("survival-notes",JSON.stringify(ns));clearNoteForm();renderNotes()}
@@ -157,7 +216,7 @@ async function startMeshDiscovery(){const state=document.getElementById("meshSta
 const _go=go;go=function(page){_go(page);if(page==="mesh")renderMesh()};
 \nfunction net(){let on=navigator.onLine;document.getElementById("onlineText").textContent=on?"● En línea":"● Sin conexión";document.getElementById("netLabel").textContent=on?"Conectividad disponible":"Modo sin conexión";document.getElementById("sysNetwork").textContent=on?"Conectado a Internet":"Sin conexión a Internet"}
 document.querySelectorAll("[data-check]").forEach(el=>{el.checked=localStorage.getItem("survival-check-"+el.dataset.check)==="1";el.addEventListener("change",()=>localStorage.setItem("survival-check-"+el.dataset.check,el.checked?"1":"0"))});
-window.addEventListener("online",net);window.addEventListener("offline",net);net();renderNotes();renderMesh();checkLocal();
+window.addEventListener("online",net);window.addEventListener("offline",net);net();renderNotes();renderMesh();restoreEasyMode();loadKnowledge();checkLocal();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 </script>
 </body></html>
