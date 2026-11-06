@@ -4,7 +4,7 @@ import * as SecureStore from "expo-secure-store";
 import {Identity,generateIdentity,encryptMessage,decryptMessage,fingerprint,newAuthToken} from "../src/crypto/e2ee";
 import * as Api from "../src/crypto/api";
 
-type ChatItem={id:string;sender:string;body:string;mine:boolean;time:number};
+type ChatItem={id:string;sender:string;body:string;mine:boolean;time:number;fingerprint?:string};
 const ID_KEY="meshbit.identity.v1", TOKEN_KEY="meshbit.auth.v1", USER_KEY="meshbit.username.v1";
 
 export default function Home(){
@@ -67,7 +67,8 @@ export default function Home(){
     seen.current.add(msg.id);
     try{
      const body=decryptMessage(msg,currentUsername,currentIdentity);
-     setItems(old=>old.some(x=>x.id===msg.id)?old:[...old,{id:msg.id,sender:msg.sender,body,mine:false,time:msg.createdAt}]);
+     const senderFingerprint=await fingerprint(msg.senderBoxPublicKey,msg.senderSigningPublicKey);
+     setItems(old=>old.some(x=>x.id===msg.id)?old:[...old,{id:msg.id,sender:msg.sender,body,mine:false,time:msg.createdAt,fingerprint:senderFingerprint}]);
      received.push(msg.id);
     }catch(e){setError("Mensaje rechazado: "+(e instanceof Error?e.message:"firma o clave no válida"));received.push(msg.id);}
    }
@@ -93,7 +94,7 @@ export default function Home(){
    setContactFingerprint(fp);
    const envelope=encryptMessage(text,keys.username,keys.boxPublicKey,identity);
    await Api.send(token,envelope);
-   setItems(old=>[...old,{id:envelope.id,sender:username,body:text,mine:true,time:Date.now()}]);
+   setItems(old=>[...old,{id:envelope.id,sender:username,body:text,mine:true,time:Date.now(),fingerprint:fp}]);
    setDraft("");
   }catch(e){setError(e instanceof Error?e.message:String(e));}
   finally{setBusy(false);}
@@ -123,7 +124,7 @@ export default function Home(){
   </View>
   <View style={s.chat}><View style={s.chatHead}><Text style={s.panelTitle}># conversación</Text><Text style={s.dim}>E2EE 1:1</Text></View>
    <ScrollView style={{flex:1}} contentContainerStyle={{paddingVertical:12}}>
-    {items.map(m=><View key={m.id} style={[s.bubble,m.mine?s.mineBubble:s.theirBubble]}><Text style={s.who}>{m.mine?"tú":m.sender}</Text><Text style={s.body}>{m.body}</Text></View>)}
+    {items.map(m=><View key={m.id} style={[s.bubble,m.mine?s.mineBubble:s.theirBubble]}><Text style={s.who}>{m.mine?"tú":m.sender}</Text><Text style={s.body}>{m.body}</Text>{!!m.fingerprint&&<Text style={s.small}>huella: {m.fingerprint}</Text>}</View>)}
     {items.length===0&&<Text style={s.dim}>Aún no hay mensajes. Escribe el nombre de usuario de otro dispositivo Meshbit para comenzar.</Text>}
    </ScrollView>
    <View style={s.compose}><TextInput value={draft} onChangeText={setDraft} placeholder="Mensaje (se cifra antes de enviar)..." placeholderTextColor="#718078" style={s.input} multiline/><Pressable onPress={sendMessage} disabled={busy||!draft.trim()||!recipient.trim()} style={s.send}>{busy?<ActivityIndicator color="#080b0a"/>:<Text style={s.sendText}>↗</Text>}</Pressable></View>
