@@ -1,0 +1,45 @@
+name: Build SURVIVAL Android APK
+on:
+  push:
+    branches: [survival]
+    paths:
+      - 'survival/mobile-app/**'
+      - 'survival/mesh-plugin/**'
+      - '.github/workflows/survival-android.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: survival/mobile-app/package.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install dependencies
+        working-directory: survival/mobile-app
+        run: npm install
+      - name: Build web bundle
+        working-directory: survival/mobile-app
+        run: npm run build
+      - name: Generate Android project and sync native plugin
+        working-directory: survival/mobile-app
+        run: |
+          npx cap add android
+          npx cap sync android
+      - name: Build debug APK
+        working-directory: survival/mobile-app/android
+        run: ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: survival-android-debug
+          path: survival/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
