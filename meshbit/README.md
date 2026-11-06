@@ -6,10 +6,10 @@ Aplicación Android/iOS en desarrollo. El portal y el relay de mensajes están a
 - [x] Base Expo / React Native Android+iOS.
 - [x] Portal Meshbit desplegado en Cloudflare.
 - [x] Base de datos D1 propia y aislada: `meshbit-private-messages`.
-- [x] API de registro, directorio de claves públicas, envío, buzón y confirmación de entrega.
-- [x] Cifrado autenticado en el cliente para mensajes 1 a 1 (TweetNaCl box + firma Ed25519).
+- [x] API de registro, directorio de claves públicas, envío, buzón y confirmación de entrega (desplegada; prueba externa pendiente).
+- [~] Cifrado autenticado implementado en el cliente para mensajes 1 a 1 (TweetNaCl box + firma Ed25519); pruebas cruzadas pendientes.
 - [x] Claves privadas y token de sesión guardados con Expo SecureStore.
-- [ ] Verificación integral en dos dispositivos físicos Android/iOS.
+- [ ] Verificación integral del envío/recepción en dos cuentas y dispositivos físicos Android/iOS.
 - [ ] Ratchet de doble vía / forward secrecy completa, multi-dispositivo y recuperación segura de cuenta.
 - [ ] Revisión de seguridad externa.
 - [ ] Bluetooth LE mesh (aplazado para una segunda etapa).
