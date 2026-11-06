@@ -9,13 +9,13 @@ Aplicación Android/iOS en desarrollo. El portal y el relay de mensajes están a
 - [x] API de registro, directorio de claves públicas, envío, buzón y confirmación de entrega (desplegada; prueba externa pendiente).
 - [~] Cifrado autenticado implementado en el cliente para mensajes 1 a 1 (TweetNaCl box + firma Ed25519); pruebas cruzadas pendientes.
 - [x] Claves privadas y token de sesión guardados con Expo SecureStore.
-- [ ] Verificación integral del envío/recepción en dos cuentas y dispositivos físicos Android/iOS.
+- [~] PWA experimental Android/iOS con registro, bóveda local cifrada, verificación manual de huellas, envío/recepción E2EE y relay D1; despliegue inicial realizado, pruebas físicas pendientes.\n- [ ] Verificación integral del envío/recepción en dos cuentas y dispositivos físicos Android/iOS.
 - [ ] Ratchet de doble vía / forward secrecy completa, multi-dispositivo y recuperación segura de cuenta.
 - [ ] Revisión de seguridad externa.
 - [ ] Bluetooth LE mesh (aplazado para una segunda etapa).
 - [ ] Builds firmadas y distribución final.
 
-## Diseño de seguridad de esta beta
+## PWA de pruebas\n- Portal: https://meshbit.matthieupierremarie.workers.dev/\n- Aplicación: https://meshbit.matthieupierremarie.workers.dev/app/\n- La PWA usa TweetNaCl en el navegador y cifra la bóveda local con AES-GCM derivado mediante PBKDF2. El service worker cachea únicamente archivos estáticos y excluye las rutas `/api/`.\n- Para probar: instala la PWA en dos dispositivos, crea una cuenta diferente en cada uno, comparte los nombres de usuario y verifica manualmente las huellas por otro canal antes de conversar.\n- Esta PWA sigue siendo experimental y no implementa Signal Protocol ni Double Ratchet; no usar para información sensible o de alto riesgo.\n\n## Diseño de seguridad de esta beta
 1. El teléfono genera una identidad de cifrado Curve25519 y una identidad de firma Ed25519.
 2. Las claves privadas permanecen en SecureStore en el dispositivo.
 3. Para cada mensaje, el emisor crea una clave Curve25519 efímera, cifra el contenido con autenticación usando la clave pública del destinatario y firma el sobre.
