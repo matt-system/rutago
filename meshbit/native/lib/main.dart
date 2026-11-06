@@ -373,7 +373,7 @@ class _MeshHomeState extends State<MeshHome> {
   final destination = TextEditingController();
   final body = TextEditingController();
   final key = TextEditingController();
-  bool busy = false;
+  bool busy = true;
   bool pinConfirmed = false;
   bool outgoingPinConfirmed = false;
   @override void initState() {
