@@ -1,0 +1,50 @@
+name: Meshbit iOS Simulator Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/meshbit-app
+    paths:
+      - "meshbit/**"
+      - ".github/workflows/meshbit-ios-simulator.yml"
+
+jobs:
+  build-ios-simulator:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: meshbit
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Generate native iOS project
+        run: npx expo prebuild --platform ios --non-interactive
+      - name: Build for iOS Simulator (no Apple signing)
+        run: |
+          xcodebuild \
+            -workspace ios/Meshbit.xcworkspace \
+            -scheme Meshbit \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      - name: Package simulator app
+        run: |
+          cd build/Build/Products/Debug-iphonesimulator
+          ditto -c -k --sequesterRsrc --keepParent Meshbit.app meshbit-ios-simulator.zip
+      - name: Upload simulator build
+        uses: actions/upload-artifact@v4
+        with:
+          name: meshbit-ios-simulator
+          path: meshbit/build/Build/Products/Debug-iphonesimulator/meshbit-ios-simulator.zip
+          if-no-files-found: error
+          retention-days: 14
