@@ -155,7 +155,8 @@ class MeshEngine {
   String? _pendingRequest, _pendingPin;
   String? get pendingPeer => _pendingRequest;
   String? get pendingPin => _pendingPin;
-  Future<void> acceptPending() async {
+  Future<void> acceptPending({required bool pinConfirmed}) async {
+    if (!pinConfirmed) throw Exception('Compara el código de seguridad antes de aceptar.');
     final id = _pendingRequest;
     if (id == null) return;
     await _nearby.acceptConnection(id);
@@ -310,7 +311,8 @@ class _MeshHomeState extends State<MeshHome> {
   final body = TextEditingController();
   final key = TextEditingController();
   bool busy = false;
-  @override void initState() { super.initState(); engine = MeshEngine((s)=>setState(()=>status=s),(m)=>setState((){if(!inbox.any((e)=>e.id==m.id)){inbox.insert(0,m); if(inbox.length>100) inbox.removeLast();}}),(p)=>setState(()=>peers=p)); _loadLocalInbox(); }
+  bool pinConfirmed = false;
+  @override void initState() { super.initState(); engine = MeshEngine((s)=>setState(()=>{status=s, if(s.startsWith('Solicitud de conexión:')) pinConfirmed=false}),(m)=>setState((){if(!inbox.any((e)=>e.id==m.id)){inbox.insert(0,m); if(inbox.length>100) inbox.removeLast();}}),(p)=>setState(()=>peers=p)); _loadLocalInbox(); }
   Future<void> _loadLocalInbox() async { try { final packets=await engine.loadInbox(); if(mounted) setState(()=>inbox..clear()..addAll(packets)); } catch(e) { if(mounted) notice('No se pudo abrir la bandeja local: $e'); } }
   @override void dispose() { destination.dispose(); body.dispose(); key.dispose(); engine.dispose(); super.dispose(); }
   void notice(String s) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s))); }
@@ -323,7 +325,7 @@ class _MeshHomeState extends State<MeshHome> {
         const SizedBox(height:12), SelectableText('ID de este dispositivo\n${engine.nodeId.isEmpty?'Se genera al iniciar':engine.nodeId}',style:const TextStyle(color:Colors.white70,fontSize:12)),
         const SizedBox(height:16),Row(children:[Expanded(child:FilledButton.icon(onPressed:busy||engine.running?null:()async{setState(()=>busy=true);try{await engine.start();}catch(e){notice('No se pudo iniciar MESH: $e');}finally{if(mounted)setState(()=>busy=false);}},icon:const Icon(Icons.radar),label:const Text('INICIAR MESH'))),const SizedBox(width:8),OutlinedButton(onPressed:engine.running?()=>engine.stop():null,child:const Text('DETENER'))])
       ])),
-      if (engine.pendingPeer != null) Card(color:const Color(0xff332d1a),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('VERIFICACIÓN DE VECINO',style:TextStyle(fontWeight:FontWeight.bold)),Text('Código de seguridad: ${engine.pendingPin}'),const SizedBox(height:8),FilledButton(onPressed:()=>engine.acceptPending(),child:const Text('ACEPTAR CONEXIÓN'))]))),
+      if (engine.pendingPeer != null) Card(color:const Color(0xff332d1a),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('VERIFICACIÓN DE VECINO',style:TextStyle(fontWeight:FontWeight.bold)),Text('Código de seguridad: ${engine.pendingPin}'),CheckboxListTile(contentPadding:EdgeInsets.zero,value:pinConfirmed,onChanged:(value)=>setState(()=>pinConfirmed=value??false),title:const Text('He comparado el código en ambos teléfonos')),const SizedBox(height:8),FilledButton(onPressed:pinConfirmed?()async{try{await engine.acceptPending(pinConfirmed:pinConfirmed);setState(()=>pinConfirmed=false);}catch(e){notice(e.toString());}}:null,child:const Text('ACEPTAR CONEXIÓN'))]))),
       const SizedBox(height:18),const Text('DISPOSITIVOS CERCANOS',style:TextStyle(letterSpacing:2,fontSize:11,color:Color(0xffa8c5ac))),
       if(peers.isEmpty) const Padding(padding:EdgeInsets.symmetric(vertical:16),child:Text('Todavía no se detectan vecinos. Ambos teléfonos deben abrir MESHBIT e iniciar la búsqueda.')),
       ...peers.map((peer)=>ListTile(leading:const Icon(Icons.bluetooth_searching),title:Text(peer.displayName),subtitle:Text(peer.id),trailing:TextButton(onPressed:()=>engine.connect(peer),child:const Text('CONECTAR')))),
