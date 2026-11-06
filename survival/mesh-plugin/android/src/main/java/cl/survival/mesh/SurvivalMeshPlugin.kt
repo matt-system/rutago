@@ -68,7 +68,7 @@ class SurvivalMeshPlugin : Plugin() {
             advertiser = adapter.bluetoothLeAdvertiser
             startGattServer(manager)
             startScanning()
-            call.resolve(JSObject().put("deviceId", "android-${adapter.address ?: "local"}").put("scanning", true).put("advertising", true))
+            call.resolve(JSObject().put("deviceId", "android-${UUID.randomUUID()}").put("scanning", true).put("advertising", true))
         } catch (e: Exception) { call.reject("No se pudo iniciar BLE: ${e.message}") }
     }
 
@@ -184,7 +184,7 @@ class SurvivalMeshPlugin : Plugin() {
         for ((id, gatt) in clients) {
             val characteristic = rxChars[id] ?: continue
             characteristic.value = bytes
-            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             if (gatt.writeCharacteristic(characteristic)) sent++
         }
         val tx = txServer
