@@ -23,16 +23,16 @@ h1{font-size:clamp(34px,7vw,56px);line-height:1.04;letter-spacing:-.045em;margin
   <section class="card">
     <span class="status">ANDROID · BUILD DE PRUEBA</span>
     <h2>Instalar en Android</h2>
-    <p>Descarga el paquete de instalación generado para esta versión. GitHub entrega el APK dentro de un archivo ZIP.</p>
-    <a class="button" href="https://github.com/matt-system/rutago/actions/runs/42153944376#artifacts" target="_blank" rel="noopener">Descargar SURVIVAL para Android ↗</a>
-    <div class="meta">Archivo: survival-android-debug · APK de depuración · versión BLE fragmentada</div>
+    <p>Esta versión abre directamente en el Asistente offline, incluye la biblioteca de guías y mantiene el Chat cercano por Bluetooth. Descarga el APK desde el artefacto de compilación.</p>
+    <a class="button" href="https://github.com/matt-system/rutago/actions/runs/42211130159#artifacts" target="_blank" rel="noopener">Descargar SURVIVAL para Android ↗</a>
+    <div class="meta">Archivo: survival-android-debug · APK de depuración · asistente offline + chat BLE</div>
     <ol class="steps">
       <li>Abre el enlace y descarga el artefacto <b>survival-android-debug</b> (ZIP).</li>
       <li>Descomprime el ZIP y abre <b>app-debug.apk</b>.</li>
       <li>Si Android lo solicita, autoriza temporalmente la instalación desde esa fuente.</li>
       <li>Abre SURVIVAL y concede los permisos Bluetooth cuando los pida.</li>
     </ol>
-    <div class="notice">Esta es una compilación de prueba, no una versión certificada para emergencias. La comunicación BLE todavía debe probarse entre teléfonos físicos, sin Wi-Fi ni datos móviles.</div>
+    <div class="notice">Es una compilación de prueba, no una versión certificada para emergencias. El asistente consulta localmente las guías incluidas. El chat transmite por Bluetooth cuando encuentra otro teléfono compatible; falta validar el intercambio real entre equipos físicos sin Internet.</div>
   </section>
 
   <section class="card">
@@ -45,7 +45,7 @@ h1{font-size:clamp(34px,7vw,56px);line-height:1.04;letter-spacing:-.045em;margin
 
   <section class="card">
     <h2>¿Quieres revisar SURVIVAL ahora?</h2>
-    <p>La versión web permite consultar la interfaz y parte de la biblioteca. El chat BLE nativo requiere instalar la aplicación Android/iOS; no funciona desde el navegador.</p>
+    <p>La versión web permite consultar la biblioteca y el asistente offline. Para usar el chat Bluetooth entre teléfonos debes instalar la app nativa; un navegador no puede hacer ese intercambio universal.</p>
     <a class="button secondary" href="https://survival-eg9.pages.dev/">Abrir SURVIVAL web ↗</a>
   </section>
   <footer>SURVIVAL · Proyecto independiente · No modifica RutaGo</footer>
