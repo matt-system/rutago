@@ -334,6 +334,7 @@ class MeshbitChatPage extends StatefulWidget {
 class _MeshbitChatPageState extends State<MeshbitChatPage> {
   late final WebViewController controller;
   bool loading = true;
+  bool failed = false;
 
   @override
   void initState() {
@@ -341,9 +342,9 @@ class _MeshbitChatPageState extends State<MeshbitChatPage> {
     controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(NavigationDelegate(
-        onPageStarted: (_) { if (mounted) setState(() => loading = true); },
-        onPageFinished: (_) { if (mounted) setState(() => loading = false); },
-        onWebResourceError: (_) { if (mounted) setState(() => loading = false); },
+        onPageStarted: (_) { if (mounted) setState(() { loading = true; failed = false; }); },
+        onPageFinished: (_) { if (mounted) setState(() { loading = false; failed = false; }); },
+        onWebResourceError: (_) { if (mounted) setState(() { loading = false; failed = true; }); },
       ))
       ..loadRequest(Uri.parse('https://meshbit.matthieupierremarie.workers.dev/app/'));
   }
@@ -354,6 +355,7 @@ class _MeshbitChatPageState extends State<MeshbitChatPage> {
     body: Stack(children:[
       WebViewWidget(controller:controller),
       if(loading) const LinearProgressIndicator(),
+      if(failed) Positioned.fill(child:ColoredBox(color:const Color(0xff101411),child:Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.wifi_off,size:42,color:Color(0xffa8c5ac)),const SizedBox(height:14),const Text('El chat necesita internet',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:8),const Text('La red MESH por Bluetooth sigue disponible. Vuelve a MESH y continúa conversando sin Wi-Fi ni datos móviles.',textAlign:TextAlign.center,style:TextStyle(color:Colors.white70)),const SizedBox(height:18),FilledButton(onPressed:()=>Navigator.of(context).pop(),child:const Text('VOLVER A MESH'))]))))),
     ]),
   );
 }
