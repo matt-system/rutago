@@ -1,0 +1,1 @@
+Coloca aquí archivos .mbtiles compatibles con TileServer GL. Descarga datos cartográficos de un proveedor con licencia adecuada y conserva sus atribuciones.
