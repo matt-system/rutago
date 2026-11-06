@@ -360,7 +360,7 @@ class MeshEngine {
 
   Future<void> saveAlias(String value) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('mesh.alias', value.trim().isEmpty ? 'mesh-user' : value.trim().substring(0, min(value.trim().length,24)));
+    await prefs.setString('mesh.alias', value.trim().isEmpty ? 'mesh-user' : value.trim().substring(0, value.trim().length > 24 ? 24 : value.trim().length));
   }
 
   Future<String> loadAlias() async {
@@ -389,7 +389,7 @@ class MeshEngine {
     if (id.isEmpty || name.isEmpty || id == nodeId) throw Exception('Revisa el alias y el ID del contacto.');
     final contacts = await loadContacts();
     contacts.removeWhere((contact)=>contact['id']==id);
-    contacts.add({'id':id,'alias':name.substring(0,min(name.length,24))});
+    contacts.add({'id':id,'alias':name.substring(0,name.length > 24 ? 24 : name.length)});
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('mesh.contacts', contacts.map(jsonEncode).toList());
   }
