@@ -179,12 +179,12 @@ class SurvivalMeshPlugin : Plugin() {
     fun send(call: PluginCall) {
         val encoded = call.getString("data") ?: run { call.reject("Falta data"); return }
         val bytes = try { Base64.decode(encoded, Base64.DEFAULT) } catch (_: Exception) { call.reject("Base64 inválido"); return }
-        if (bytes.size > 160) { call.reject("Mensaje demasiado grande para el enlace BLE"); return }
+        if (bytes.size > 20) { call.reject("El paquete BLE supera 20 bytes"); return }
         var sent = 0
         for ((id, gatt) in clients) {
             val characteristic = rxChars[id] ?: continue
             characteristic.value = bytes
-            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
             if (gatt.writeCharacteristic(characteristic)) sent++
         }
         val tx = txServer
