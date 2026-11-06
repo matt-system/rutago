@@ -85,7 +85,14 @@ public class SurvivalMeshPlugin: CAPPlugin, CAPBridgedPlugin, CBCentralManagerDe
         notifyListeners("peer", data: ["id": p.identifier.uuidString, "name": p.name ?? deviceName, "rssi": RSSI.intValue, "connected": p.state == .connected])
         if p.state == .disconnected { manager.connect(p, options: nil) }
     }
-    public func centralManager(_ manager: CBCentralManager, didConnect p: CBPeripheral) { p.discoverServices([serviceUUID]) }
+    public func centralManager(_ manager: CBCentralManager, didConnect p: CBPeripheral) {
+        notifyListeners("peer", data: ["id": p.identifier.uuidString, "name": p.name ?? deviceName, "connected": true])
+        p.discoverServices([serviceUUID])
+    }
+    public func centralManager(_ manager: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) {
+        notifyListeners("peer", data: ["id": p.identifier.uuidString, "name": p.name ?? deviceName, "connected": false])
+        if started { manager.connect(p, options: nil) }
+    }
     public func peripheral(_ p: CBPeripheral, didDiscoverServices error: Error?) {
         guard let service = p.services?.first(where: { $0.uuid == serviceUUID }) else { return }; p.discoverCharacteristics([rxUUID, txUUID], for: service)
     }
@@ -98,7 +105,12 @@ public class SurvivalMeshPlugin: CAPPlugin, CAPBridgedPlugin, CBCentralManagerDe
     public func peripheral(_ p: CBPeripheral, didUpdateValueFor c: CBCharacteristic, error: Error?) {
         if let data = c.value { notifyListeners("frame", data: ["data": data.base64EncodedString(), "peerId": p.identifier.uuidString]) }
     }
-    public func peripheralManager(_ manager: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) { subscribed.append(central) }
+    public func peripheralManager(_ manager: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) {
+        if !subscribed.contains(where: { $0.identifier == central.identifier }) { subscribed.append(central) }
+    }
+    public func peripheralManager(_ manager: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
+        subscribed.removeAll(where: { $0.identifier == central.identifier })
+    }
     public func peripheralManager(_ manager: CBPeripheralManager, didReceiveWrite requests: [CBATTRequest]) {
         for request in requests {
             if let data = request.value { notifyListeners("frame", data: ["data": data.base64EncodedString(), "peerId": request.central.identifier.uuidString]) }
