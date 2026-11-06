@@ -365,7 +365,7 @@ class MeshEngine {
 
   Future<String> loadAlias() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('mesh.alias') ?? 'mesh-user';
+    return prefs.getString('mesh.alias') ?? 'mesh-${nodeId.substring(0,4)}';
   }
 
   Future<List<Map<String,String>>> loadContacts() async {
@@ -629,6 +629,22 @@ class _MeshHomeState extends State<MeshHome> {
   Future<void> _sendMessage() async {
     final text = composer.text.trim();
     if (text.isEmpty || busy) return;
+    if (text == '/help') {
+      composer.clear();
+      notice('Comandos: /help muestra ayuda, /who lista nodos visibles y /id copia tu ID MESH.');
+      return;
+    }
+    if (text == '/who') {
+      composer.clear();
+      notice(peers.isEmpty ? 'No hay nodos visibles ahora.' : 'Nodos cercanos: ${peers.map((peer)=>peer.displayName).join(', ')}');
+      return;
+    }
+    if (text == '/id') {
+      composer.clear();
+      await Clipboard.setData(ClipboardData(text:engine.nodeId));
+      notice('Tu ID MESH fue copiado.');
+      return;
+    }
     final conversationId = _conversationId;
     final keyHex = _isPublicChat ? publicKey : await engine.loadContactKey(conversationId);
     if (keyHex == null || keyHex.isEmpty) {
@@ -1090,6 +1106,7 @@ class _MeshHomeState extends State<MeshHome> {
         if (selectedTab == 0 || (selectedTab == 1 && selectedContactId != null))
           IconButton(tooltip: bubbleMode ? 'Vista terminal' : 'Vista burbujas', onPressed: () => setState(() => bubbleMode = !bubbleMode), icon: Icon(bubbleMode ? Icons.subject : Icons.chat_bubble_outline)),
         IconButton(tooltip: 'Mi identidad', onPressed: _showProfile, icon: const Icon(Icons.person_outline)),
+        IconButton(tooltip: 'CHAT online · requiere Internet', onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MeshbitChatPage())), icon: const Icon(Icons.public)),
       ],
     ),
     body: IndexedStack(
