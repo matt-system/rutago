@@ -153,7 +153,7 @@ class MeshEngine {
       await _receive(payload.bytes!);
     });
     await _nearby.startAdvertising(options: const AdvertisingOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.bleOnly,securityMode:SecurityMode.pinVerification));
-    await _nearby.startDiscovery(options: const DiscoveryOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.hybrid));
+    await _nearby.startDiscovery(options: const DiscoveryOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.bleOnly));
     running = true;
     onStatus('Bluetooth LE activo: busca teléfonos cercanos sin Wi-Fi ni datos móviles.');
   }
