@@ -1,27 +1,36 @@
-# MESHBIT Native — offline mesh foundation
+# MESHBIT Native — offline mesh client
 
-This is the native Flutter client for Android and iOS. It is separate from the Cloudflare PWA.
+This is the native radio client for MESHBIT. The Worker-hosted PWA cannot provide reliable BLE discovery or multi-hop radio relay on iOS and Android; this Flutter app is the native implementation of that capability.
 
-## Current implementation
-- Native nearby discovery over hybrid BLE and local peer-to-peer networking using the `nearby` transport.
-- User-approved incoming peer connections with a short authentication string (SAS) exposed by the transport.
-- Durable SQLite packet queue, message IDs, duplicate suppression, TTL (12 hops), and store/forward relay.
-- AES-256-GCM encrypted message payloads. Relay nodes forward opaque ciphertext.
-- No account, phone number, email, or cloud server is required for local mesh transport.
+## Implemented in the native client
 
-## Important current limitations
-- This is an initial native mesh foundation, not a security-audited messenger.
-- The conversation key is currently shared out-of-band: generate a 32-byte key on one device and securely transfer it to the intended recipient. Do not send the key through the mesh.
-- The first implementation routes by the recipient's installation ID. It does not yet implement automatic public-key contact discovery, group membership, Signal Double Ratchet, or audited key rotation.
-- iOS background discovery/advertising is restricted by the operating system; foreground operation is the reliable first target. Android background relay also requires explicit foreground-service/lifecycle work.
-- Real radio behavior must be tested on at least two physical phones. Emulators and static code checks cannot prove BLE/Wi-Fi peer operation.
+- Nearby discovery and advertising through the `nearby` transport with hybrid local Wi-Fi/LAN and BLE GATT sessions.
+- Encrypted, PIN-verified peer sessions.
+- Application-layer store-and-forward relay: AES-256-GCM ciphertext packets are stored in SQLite and forwarded to connected peers.
+- Multi-hop forwarding with a maximum TTL of 12 and packet-ID deduplication.
+- Seven-day local packet retention.
+- A local inbox; only the intended recipient with the shared conversation key can decrypt. Sender and recipient IDs are inside the encrypted payload, not in the relay envelope.
+- No server, Wi-Fi internet, or mobile-data connection is required after installation to exchange packets locally.
 
-## Build
-Open this folder in a Flutter environment and run:
-```sh
-flutter pub get
-flutter create --project-name meshbit --org app.meshbit --platforms=android,ios .
-flutter run
-```
+## First-use flow
 
-Android APK CI is configured in `.github/workflows/meshbit-android.yml`.
+1. Install MESHBIT Native on each phone and allow Bluetooth permissions.
+2. Open the app and tap **INICIAR MESH** on all participating phones.
+3. Connect nearby phones. Compare the session PIN shown on both screens before accepting.
+4. Share the recipient's **ID de este dispositivo** and the conversation key over a separate trusted channel. Generate one key and use the same 64-character hex key on both ends.
+5. For a multi-hop test, keep node B connected to A and C. Put A and C out of direct radio range, send from A to C, and leave B running as a relay. The packet remains queued on B and is forwarded when a peer/route becomes available.
+
+## Platform realities
+
+- Android APK builds are uploaded by GitHub Actions as the `meshbit-native-android-apk` artifact.
+- iOS support is included in the Flutter project and its Bluetooth/local-network usage declarations. A signed iPhone install/TestFlight release requires Apple signing credentials and a macOS build.
+- iOS limits BLE scanning/advertising and background execution. Bluetooth background modes do not make an iPhone a permanent always-on relay. Keep the app foregrounded for reliable relay behavior.
+- The native client is currently a separate native build target from the Worker-hosted PWA. It does not yet share the PWA identity vault or contacts.
+- The `nearby` transport is a young third-party dependency. CI compilation/unit checks are not proof of a successful multi-phone field test; radio behavior needs physical Android and iPhone testing.
+
+## Security notes
+
+- Transport sessions use encrypted PIN-verification mode.
+- Message payloads use AES-256-GCM with a user-shared 32-byte conversation key.
+- Relays see packet ID, hop limit, nonce, authentication tag, ciphertext, and local storage timing; they do not see message text or sender/recipient IDs inside the ciphertext.
+- This is not an independently audited Signal-style protocol. Key exchange is manual and must use a trusted channel.
