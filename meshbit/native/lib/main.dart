@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
+import 'dart:math';\nimport 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
@@ -9,7 +9,7 @@ import 'package:nearby/nearby.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart';\nimport 'package:permission_handler/permission_handler.dart';
 
 void main() => runApp(const MeshbitApp());
 
