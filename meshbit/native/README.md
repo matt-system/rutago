@@ -15,7 +15,7 @@ This is the native radio client for MESHBIT. The Worker-hosted PWA cannot provid
 ## First-use flow
 
 1. Install MESHBIT Native on each phone and allow Bluetooth permissions.
-2. Open the app and tap **INICIAR MESH** on all participating phones.
+2. Open MESHBIT. The native app starts Bluetooth LE discovery and advertising automatically; keep the MESH screen open on all participating phones. **INICIAR MESH** remains available as a retry if Bluetooth permissions were denied.
 3. Connect nearby phones. Compare the session PIN shown on both screens before accepting.
 4. Share the recipient's **ID de este dispositivo** and the conversation key over a separate trusted channel. Generate one key and use the same 64-character hex key on both ends.
 5. For a multi-hop test, keep node B connected to A and C. Put A and C out of direct radio range, send from A to C, and leave B running as a relay. The packet remains queued on B and is forwarded when a peer/route becomes available.
