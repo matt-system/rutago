@@ -50,18 +50,18 @@ class MeshEngine {
   StreamSubscription? _discoverySub, _requestsSub, _payloadSub, _peerStateSub;
   Database? _db;
   String nodeId = '';
-  bool running = false;
+  bool running = false;\n  bool _initialized = false;
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     nodeId = prefs.getString('mesh.node') ?? _uuid.v4();
     await prefs.setString('mesh.node', nodeId);
-    _nearby = NearbyService(localDisplayName:'MESHBIT', localPeerId:nodeId);
+    _nearby = NearbyService(localDisplayName:'MESHBIT', localPeerId:nodeId);\n    _initialized = true;
     final dbPath = p.join(await getDatabasesPath(), 'meshbit_mesh.db');
     _db = await openDatabase(dbPath, version:1, onCreate:(db,_) async {
       await db.execute('CREATE TABLE packets(id TEXT PRIMARY KEY, json TEXT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)');
     });
-    final rows = await _db!.query('packets', where:'delivered=0');
+    await _db!.delete('packets', where:'created < ?', whereArgs:[DateTime.now().subtract(const Duration(days:7)).millisecondsSinceEpoch]);\n    final rows = await _db!.query('packets', where:'delivered=0');
     for (final row in rows) { try { _seen.add(row['id'] as String); } catch (_) {} }
   }
 
@@ -194,7 +194,7 @@ class MeshEngine {
   }
   Future<void> dispose() async {
     await _discoverySub?.cancel(); await _requestsSub?.cancel(); await _payloadSub?.cancel();
-    await _nearby.dispose(); await _db?.close();
+    if (_initialized) await _nearby.dispose();\n    await _db?.close();
   }
 }
 
