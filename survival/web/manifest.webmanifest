@@ -1,0 +1,17 @@
+{
+  "name": "SURVIVAL — Offline Knowledge System",
+  "short_name": "SURVIVAL",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1411",
+  "theme_color": "#101713",
+  "description": "Centro personal de conocimiento y preparación offline",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
