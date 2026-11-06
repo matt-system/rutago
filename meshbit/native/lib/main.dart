@@ -14,6 +14,7 @@ import 'package:uuid/uuid.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 void main() => runApp(const MeshbitApp());
 
@@ -174,6 +175,7 @@ class MeshEngine {
     });
     await _nearby.startAdvertising(options: const AdvertisingOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.bleOnly,securityMode:SecurityMode.pinVerification));
     await _nearby.startDiscovery(options: const DiscoveryOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.bleOnly));
+    await WakelockPlus.enable();
     running = true;
     onStatus('Bluetooth LE activo: busca teléfonos cercanos sin Wi-Fi ni datos móviles.');
   }
@@ -316,11 +318,13 @@ class MeshEngine {
   }
   Future<void> stop() async {
     await _nearby.stopDiscovery(); await _nearby.stopAdvertising(); await _nearby.disconnectAll();
+    await WakelockPlus.disable();
     running = false; onStatus('MESH detenido.');
   }
   Future<void> dispose() async {
     await _discoverySub?.cancel(); await _requestsSub?.cancel(); await _payloadSub?.cancel(); await _peerStateSub?.cancel();
     if (_initialized) await _nearby.dispose();
+    await WakelockPlus.disable();
     await _db?.close();
   }
 }
