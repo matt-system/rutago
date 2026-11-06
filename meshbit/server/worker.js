@@ -39,7 +39,7 @@ export default {async fetch(request,env){
  }
  if(p==="/api/inbox"&&request.method==="GET"){
   const now=Date.now();await env.MESHBIT_DB.prepare("DELETE FROM messages WHERE expires_at<?").bind(now).run();
-  const rows=await env.MESHBIT_DB.prepare("SELECT m.id,? AS recipient,m.ephemeral_public_key AS ephemeralPublicKey,m.nonce,m.ciphertext,m.signature,m.created_at AS createdAt,u.username AS sender,u.signing_public_key AS senderSigningPublicKey FROM messages m JOIN users u ON u.id=m.sender_id WHERE m.recipient_id=? AND m.expires_at>? ORDER BY m.created_at LIMIT 100").bind(user.username,user.id,now).all();
+  const rows=await env.MESHBIT_DB.prepare("SELECT m.id,? AS recipient,m.ephemeral_public_key AS ephemeralPublicKey,m.nonce,m.ciphertext,m.signature,m.created_at AS createdAt,u.username AS sender,u.signing_public_key AS senderSigningPublicKey,u.box_public_key AS senderBoxPublicKey FROM messages m JOIN users u ON u.id=m.sender_id WHERE m.recipient_id=? AND m.expires_at>? ORDER BY m.created_at LIMIT 100").bind(user.username,user.id,now).all();
   return reply({messages:rows.results||[]});
  }
  if(p==="/api/ack"&&request.method==="POST"){
