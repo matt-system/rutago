@@ -1,37 +1,33 @@
 # Meshbit — arquitectura de seguridad y transporte
 
-## Objetivo
-Mensajes de extremo a extremo que mantengan el mismo ciphertext al viajar por Internet, BLE directo o nodos intermedios. Los relays no reciben claves de descifrado.
+## Primera etapa: mensajería online cifrada 1 a 1
+- La identidad local tiene una clave Curve25519 para cifrado y una clave Ed25519 para firmas.
+- Las claves privadas y el token de sesión se guardan en Expo SecureStore.
+- Cada mensaje usa una clave efímera Curve25519 nueva, un nonce aleatorio y cifrado autenticado TweetNaCl box dirigido a la clave pública del destinatario.
+- El emisor firma el sobre (ID, destinatario, clave efímera pública, nonce y ciphertext) con Ed25519.
+- El destinatario verifica la firma y descifra localmente.
+- Cloudflare D1 conserva solo el sobre cifrado y los datos mínimos de entrega. El Worker autentica por token aleatorio; en D1 se almacena únicamente el hash SHA-256 del token.
+- Los mensajes se eliminan al confirmar recepción o al expirar a los siete días.
 
-## E2EE
-- Integrar Matrix Rust SDK / matrix-sdk-crypto mediante bindings nativos oficiales UniFFI (Swift y Kotlin).
-- Usar sesiones Olm para comunicación entre dispositivos y Megolm para salas/grupos, con gestión de claves, rotación y recuperación según las capacidades del SDK.
-- Verificar identidad y dispositivos mediante cross-signing / SAS. Mostrar claramente dispositivos no verificados y no compartirles claves de salas.
-- Guardar secretos y estado criptográfico con almacenamiento nativo protegido; nunca enviar claves privadas al Worker.
-- El backend Cloudflare solo enruta y almacena ciphertext y metadatos mínimos. Minimizar metadatos y definir retención.
-- No diseñar un protocolo criptográfico propio ni presentar cifrado como activo antes de completar pruebas de interoperabilidad y revisión.
+## Límites y controles pendientes
+- No es Signal Protocol: falta un ratchet de doble vía, rotación/recuperación de claves y soporte multi-dispositivo.
+- Una clave pública descargada del directorio necesita verificación independiente de huella para evitar sustitución maliciosa.
+- La pérdida del dispositivo implica pérdida de identidad en esta versión.
+- Requiere pruebas físicas entre dos dispositivos, inspección del tráfico y revisión independiente antes de uso sensible.
 
-## BLE mesh
-react-native-ble-plx solo cubre operaciones BLE central y no ofrece el modo peripheral requerido para teléfono-a-teléfono bidireccional. Por eso no se usa como solución mesh.
-
-Implementar una capa nativa:
-- iOS: CoreBluetooth central + peripheral manager; declarar capacidades de background, restauración de estado y UUID de servicio propio.
-- Android: BluetoothLeScanner + BluetoothLeAdvertiser + GATT client/server; permisos runtime para versiones Android soportadas.
-- Protocolo de paquetes: versión, message_id aleatorio, sender_key_id, TTL/hop_limit, timestamp aproximado y ciphertext opaco.
-- Retransmisión store-and-forward con deduplicación, límites de tamaño/cola, expiración y protección contra loops.
-- El relay no modifica ni descifra ciphertext.
-- BLE no promete alcance ilimitado: cada salto depende de proximidad, radio, batería, permisos y que el SO mantenga el proceso/servicio activo.
-
-## Transporte online
-- Un mismo sobre cifrado viaja por WebSocket/HTTP online o por BLE.
-- Cloudflare Durable Objects pueden coordinar presencia/entrega, pero nunca terminan el cifrado ni poseen las claves.
-- La app debe soportar reintentos, ACK, orden parcial y deduplicación.
+## Segunda etapa: Bluetooth LE mesh
+- El mismo sobre cifrado se podrá transportar por Internet o BLE sin modificar el ciphertext.
+- iOS: CoreBluetooth central + peripheral manager, capacidades background y restauración de estado.
+- Android: BluetoothLeScanner + BluetoothLeAdvertiser + GATT client/server.
+- Paquetes con ID único, TTL/hop limit, deduplicación, expiración y límites de tamaño.
+- Store-and-forward solo retransmite ciphertext; los nodos intermedios no poseen claves.
+- El alcance y funcionamiento en segundo plano dependen de proximidad, batería, permisos y restricciones del sistema operativo.
 
 ## Puertas de seguridad antes de producción
-1. Pruebas de vector criptográfico y compatibilidad con otro cliente Matrix.
-2. Verificación SAS y cross-signing entre dos dispositivos.
-3. Inspección de tráfico: ningún mensaje en claro en backend/logs.
-4. Pruebas de restauración de claves, cambio de dispositivo y pérdida de sesión.
-5. Pruebas BLE GATT Android↔Android, iPhone↔iPhone y Android↔iPhone, con app foreground/background.
-6. Pruebas de replay, duplicados, TTL, mensajes grandes y nodos maliciosos.
-7. Auditoría externa antes de prometer seguridad para comunicaciones sensibles.
+1. Pruebas automatizadas de cifrado/descifrado y rechazo de firmas inválidas.
+2. Pruebas físicas entre dos cuentas y dos teléfonos.
+3. Verificación de huellas por canal independiente.
+4. Inspección de tráfico y logs: ningún mensaje en claro ni claves privadas en el backend.
+5. Pruebas de pérdida/recuperación de dispositivo y rotación de claves.
+6. Auditoría externa.
+7. Pruebas BLE Android↔Android, iPhone↔iPhone y Android↔iPhone cuando comience la segunda etapa.
