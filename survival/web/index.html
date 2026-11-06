@@ -4,6 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#101713"><meta name="description" content="SURVIVAL — guía práctica de preparación y supervivencia offline">
 <link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <title>SURVIVAL — Knowledge that stays</title>
 <style>
 :root{--bg:#0d1411;--panel:#151f19;--panel2:#1b2921;--line:#2a3a30;--text:#edf2eb;--muted:#98a99c;--green:#a5c58c;--green2:#6f956d;--amber:#d8b779;--red:#d88478;--radius:18px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -101,8 +102,17 @@ input,textarea,.search{font-size:16px;min-height:50px}
   <div class="card" style="margin-top:16px"><div class="terminal-head"><span>/// BIBLIOTECA AMPLIADA</span><span class="terminal-status">KIWIX / ZIM</span></div><h3>Enciclopedias y manuales completos</h3><p id="kiwixStatus">Servidor Kiwix: comprobando...</p><p>Si instalas archivos ZIM en el servidor local, podrás consultar enciclopedias y manuales completos sin Internet.</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn" onclick="openLocalService(8081)">ABRIR KIWIX</button><a class="btn secondary" href="https://library.kiwix.org/" target="_blank" rel="noreferrer">VER CATÁLOGO ↗</a></div></div>
  </section>
  <section id="maps" class="section">
-  <div class="section-title"><h2>Mapas y orientación</h2><p>Consulta cartografía online y prepara tus mapas regionales para uso sin conexión.</p></div>
-  <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><h3>Servidor cartográfico · TileServer GL</h3><p id="mapsStatus">Servidor de mapas: comprobando...</p></div><span class="tag">MBTILES / OFFLINE</span></div><p style="margin-top:10px">El servidor publica mapas vectoriales desde archivos .mbtiles almacenados en data/maps.</p><div class="mapframe" style="margin-top:14px"><iframe id="offlineMapFrame" title="Mapas offline SURVIVAL" src="about:blank" loading="lazy"></iframe></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn" onclick="openLocalService(8082)">Abrir servidor de mapas</button><a class="btn secondary" href="https://openmaptiles.com/downloads/" target="_blank" rel="noreferrer">Buscar mapas MBTiles ↗</a></div><div class="notice">Para tener mapas reales sin Internet, descarga un archivo MBTiles de tu región y guárdalo en survival/data/maps. Los datos cartográficos no se distribuyen con esta app. Verifica licencia y atribución de cada mapa.</div></div>
+  <div class="section-title"><h2>Mapa de Chile</h2><p>Parte explorando Chile. Puedes acercar, alejar y desplazarte por el mapa.</p></div>
+  <div class="card">
+   <div class="terminal-head"><span>/// CARTOGRAFÍA DE CHILE</span><span class="terminal-status" id="mapsStatus">● MAPA ONLINE</span></div>
+   <div class="mapframe" style="height:540px;margin-top:12px;overflow:hidden"><div id="survivalMap" role="application" aria-label="Mapa interactivo de Chile" style="width:100%;height:100%;background:#17231b"></div></div>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+    <button class="btn" onclick="setChileView()">VER TODO CHILE</button>
+    <button class="btn secondary" onclick="setCentralView()">ZONA CENTRAL</button>
+   </div>
+   <div class="notice">Este mapa usa cartografía OpenStreetMap y necesita Internet para cargar las calles. La vista inicial muestra Chile; los mapas sin conexión se incorporarán después mediante archivos regionales descargados en el servidor local.</div>
+   <p style="font-size:11px;margin-top:10px;color:var(--muted)">Cartografía © OpenStreetMap contributors · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" style="color:#b8dda9">Atribución y licencia</a></p>
+  </div>
  </section>
  <section id="assistant" class="section">
   <div class="section-title"><h2>Asistente de conocimiento</h2><p>Conecta con un modelo de IA que se ejecuta en tu propio equipo.</p></div>
@@ -153,6 +163,18 @@ input,textarea,.search{font-size:16px;min-height:50px}
  <div class="footer">SURVIVAL · OFFLINE KNOWLEDGE SYSTEM · Datos locales en tu dispositivo</div>
 </main></div>
 <script>
+
+let survivalMap=null;
+function initSurvivalMap(){
+ const el=document.getElementById("survivalMap");
+ if(!el || survivalMap || !window.L)return;
+ survivalMap=L.map(el,{scrollWheelZoom:true}).setView([-35.6751,-71.543],4);
+ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(survivalMap);
+ setTimeout(()=>survivalMap&&survivalMap.invalidateSize(),120);
+}
+function setChileView(){if(!survivalMap)initSurvivalMap();if(survivalMap)survivalMap.setView([-35.6751,-71.543],4)}
+function setCentralView(){if(!survivalMap)initSurvivalMap();if(survivalMap)survivalMap.setView([-33.45,-70.66],6)}
+
 const titles={mesh:"Chat cercano",home:"SURVIVAL",library:"Biblioteca",maps:"Mapas y orientación",assistant:"Asistente IA",tools:"Herramientas",notes:"Notas personales",system:"Sistema"};
 function go(page){document.querySelectorAll(".section").forEach(s=>s.classList.toggle("active",s.id===page));document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));document.getElementById("pageTitle").textContent=titles[page]||"SURVIVAL";window.scrollTo(0,0)}
 document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
@@ -203,7 +225,7 @@ function clearNoteForm(){document.getElementById("noteTitle").value="";document.
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 async function makeHash(){let t=document.getElementById("hashInput").value;let h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));document.getElementById("hashOutput").textContent=[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("")}
 function base64(mode){let el=document.getElementById("baseInput"),out=document.getElementById("baseOutput");try{out.textContent=mode==="encode"?btoa(unescape(encodeURIComponent(el.value))):decodeURIComponent(escape(atob(el.value.trim())))}catch(e){out.textContent="No se pudo procesar el texto. Revisa el formato."}}
-async function checkLocal(){let s=document.getElementById("aiStatus"),tag=document.getElementById("aiTag");try{let r=await fetch("/api/health");if(!r.ok)throw 0;let d=await r.json();if(!d.ok)throw 0;s.textContent="Ollama "+(d.ollama?"✓":"—")+" · Qdrant "+(d.qdrant?"✓":"—")+" · Kiwix "+(d.kiwix?"✓":"—")+" · Mapas "+(d.maps?"✓":"—");tag.textContent="SERVIDOR LOCAL";document.getElementById("sysAI").textContent=s.textContent;document.getElementById("kiwixStatus").textContent=d.kiwix?"Kiwix activo · listo para servir archivos ZIM":"Kiwix no disponible";document.getElementById("mapsStatus").textContent=d.maps?"TileServer GL activo · esperando archivos MBTiles":"Servidor de mapas no disponible";document.getElementById("offlineMapFrame").src=location.port==="8788"?"http://"+location.hostname+":8082":"about:blank";return}catch{}s.textContent="No conectado a un servidor local. Abre SURVIVAL desde el PC que ejecuta Docker.";tag.textContent="SIN SERVIDOR";document.getElementById("sysAI").textContent="No conectado";document.getElementById("kiwixStatus").textContent="Disponible al iniciar el servidor Docker local";document.getElementById("mapsStatus").textContent="Disponible al iniciar el servidor Docker local"}
+async function checkLocal(){let s=document.getElementById("aiStatus"),tag=document.getElementById("aiTag");try{let r=await fetch("/api/health");if(!r.ok)throw 0;let d=await r.json();if(!d.ok)throw 0;s.textContent="Ollama "+(d.ollama?"✓":"—")+" · Qdrant "+(d.qdrant?"✓":"—")+" · Kiwix "+(d.kiwix?"✓":"—")+" · Mapas "+(d.maps?"✓":"—");tag.textContent="SERVIDOR LOCAL";document.getElementById("sysAI").textContent=s.textContent;document.getElementById("kiwixStatus").textContent=d.kiwix?"Kiwix activo · listo para servir archivos ZIM":"Kiwix no disponible";document.getElementById("mapsStatus").textContent=d.maps?"TileServer GL activo · esperando archivos MBTiles":"Servidor de mapas no disponible";if(survivalMap)survivalMap.invalidateSize();return}catch{}s.textContent="No conectado a un servidor local. Abre SURVIVAL desde el PC que ejecuta Docker.";tag.textContent="SIN SERVIDOR";document.getElementById("sysAI").textContent="No conectado";document.getElementById("kiwixStatus").textContent="Disponible al iniciar el servidor Docker local";document.getElementById("mapsStatus").textContent="Disponible al iniciar el servidor Docker local"}
 function openLocalService(port){if(location.port!=="8788"){alert("Abre SURVIVAL desde el servidor local (http://IP-DEL-PC:8788) para acceder a los servicios offline.");return}window.open("http://"+location.hostname+":"+port,"_blank","noopener")}
 async function indexKnowledge(){const title=document.getElementById("docTitle").value.trim()||"Documento personal",textValue=document.getElementById("docText").value.trim(),status=document.getElementById("indexStatus");if(textValue.length<40){status.textContent="Agrega al menos 40 caracteres.";return}status.textContent="Dividiendo e indexando documento en Qdrant...";try{const r=await fetch("/api/knowledge/index",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title,text:textValue})});const d=await r.json();if(!r.ok)throw new Error(d.error||"No se pudo indexar");status.textContent="Documento guardado: "+d.title+" · "+d.chunks+" fragmentos indexados.";document.getElementById("docText").value=""}catch(e){status.textContent="Error: "+e.message}}
 async function sendChat(){let input=document.getElementById("chatInput"),q=input.value.trim();if(!q)return;let box=document.getElementById("chatbox");box.insertAdjacentHTML("beforeend",'<div class="bubble user">'+esc(q)+'</div>');input.value="";let wait=document.createElement("div");wait.className="bubble ai";wait.textContent="Buscando en tus documentos y consultando la IA local...";box.appendChild(wait);box.scrollTop=box.scrollHeight;try{const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:q})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Servidor no disponible");wait.textContent=(d.reply||"Sin respuesta")+(d.sources?.length?"\n\nDocumentos consultados: "+d.sources.map(x=>x.title).filter(Boolean).join(", "):"\n\nNo se encontraron fragmentos relevantes en la memoria documental.")}catch(e){wait.textContent="No se pudo conectar con la IA local. Abre SURVIVAL desde el PC o la red local donde corre Docker. "+e.message}box.scrollTop=box.scrollHeight}
@@ -215,11 +237,12 @@ function sendMeshMessage(){const el=document.getElementById("meshInput"),v=el.va
 function sendMeshAlert(){saveMesh("ALERTA DE EMERGENCIA. Necesito asistencia. Este mensaje está guardado localmente; no se ha transmitido a otros teléfonos.",true)}
 function clearMeshLog(){if(confirm("¿Borrar el historial local de este dispositivo?")){localStorage.removeItem("survival-mesh-log");renderMesh()}}
 async function startMeshDiscovery(){const state=document.getElementById("meshState");state.textContent="● BLE NO DISPONIBLE EN WEB";document.getElementById("meshInfo").textContent="Para descubrir iPhone y Android cercanos se necesita la app nativa SURVIVAL con Bluetooth Low Energy. Esta página Cloudflare no tiene acceso a la radio BLE del sistema.";alert("El navegador web no permite implementar un chat BLE universal iPhone ↔ Android. La app nativa debe gestionar el escaneo y la conexión.");}
-const _go=go;go=function(page){_go(page);if(page==="mesh")renderMesh()};
+const _go=go;go=function(page){_go(page);if(page==="mesh")renderMesh();if(page==="maps"){initSurvivalMap();setTimeout(()=>survivalMap&&survivalMap.invalidateSize(),150)}};
 
 function net(){let on=navigator.onLine;document.getElementById("onlineText").textContent=on?"● En línea":"● Sin conexión";document.getElementById("netLabel").textContent=on?"Conectividad disponible":"Modo sin conexión";document.getElementById("sysNetwork").textContent=on?"Conectado a Internet":"Sin conexión a Internet"}
 document.querySelectorAll("[data-check]").forEach(el=>{el.checked=localStorage.getItem("survival-check-"+el.dataset.check)==="1";el.addEventListener("change",()=>localStorage.setItem("survival-check-"+el.dataset.check,el.checked?"1":"0"))});
 window.addEventListener("online",net);window.addEventListener("offline",net);net();renderNotes();renderMesh();loadKnowledge();checkLocal();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </body></html>
