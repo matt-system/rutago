@@ -53,6 +53,7 @@ class MeshEngine {
   bool _initialized = false;
 
   Future<void> init() async {
+    if (_initialized) return;
     final prefs = await SharedPreferences.getInstance();
     nodeId = prefs.getString('mesh.node') ?? _uuid.v4();
     await prefs.setString('mesh.node', nodeId);
@@ -167,7 +168,7 @@ class MeshEngine {
     await _db!.insert('packets', {'id':env.id,'json':jsonEncode(env.toJson()),'created':DateTime.now().millisecondsSinceEpoch}, conflictAlgorithm:ConflictAlgorithm.ignore);
   }
   Future<void> _broadcast(MeshEnvelope env) async {
-    if (_peers.isEmpty) { onStatus('Sin vecinos conectados: mensaje guardado para retransmitir más tarde.'); return; }
+    if (_nearby.connectedPeers.isEmpty) { onStatus('Sin vecinos conectados: mensaje guardado para retransmitir más tarde.'); return; }
     await _nearby.sendBytesToAll(Uint8List.fromList(utf8.encode(jsonEncode(env.toJson()))));
   }
   Future<void> _flush() async {
@@ -193,7 +194,7 @@ class MeshEngine {
     running = false; onStatus('MESH detenido.');
   }
   Future<void> dispose() async {
-    await _discoverySub?.cancel(); await _requestsSub?.cancel(); await _payloadSub?.cancel();
+    await _discoverySub?.cancel(); await _requestsSub?.cancel(); await _payloadSub?.cancel(); await _peerStateSub?.cancel();
     if (_initialized) await _nearby.dispose();
     await _db?.close();
   }
