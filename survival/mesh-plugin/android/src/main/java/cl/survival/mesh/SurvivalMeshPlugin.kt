@@ -40,8 +40,8 @@ class SurvivalMeshPlugin : Plugin() {
     private var scanCallback: ScanCallback? = null
     private val clients = ConcurrentHashMap<String, BluetoothGatt>()
     private val rxChars = ConcurrentHashMap<String, BluetoothGattCharacteristic>()
-    private val connectedClientIds = ConcurrentHashMap.newKeySet<String>()
     private val connectedServers = ConcurrentHashMap<String, BluetoothDevice>()
+    private val connectedClientIds = ConcurrentHashMap.newKeySet<String>()
     private var txServer: BluetoothGattCharacteristic? = null
     private var started = false
     private var deviceName = "SURVIVAL"
