@@ -33,6 +33,10 @@ El relay no recibe las claves privadas ni el texto plano. La API autentica cada 
 - No usar para comunicaciones de alto riesgo hasta completar pruebas y revisión externa.
 - Bluetooth mesh no está habilitado en esta etapa.
 
+## Tests
+
+El test automático comprueba las primitivas TweetNaCl usadas (cifrado/descifrado, firma y rechazo de alteraciones). No sustituye una prueba de extremo a extremo entre dos instalaciones ni una auditoría.
+
 ## Cloudflare
 - Worker: `meshbit`
 - D1: `meshbit-private-messages`
@@ -43,6 +47,7 @@ El relay no recibe las claves privadas ni el texto plano. La API autentica cada 
 ```bash
 npm install
 npm run typecheck
+npm run test:crypto
 npx expo start
 ```
 
