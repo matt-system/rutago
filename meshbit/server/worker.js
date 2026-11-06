@@ -18,7 +18,7 @@ export default {async fetch(request,env){
  if(p==="/api/register"&&request.method==="POST"){
   const b=await read(request);if(!b||typeof b.username!=="string"||!/^[a-zA-Z0-9_.-]{3,24}$/.test(b.username)||typeof b.authToken!=="string"||b.authToken.length<40||!b64(b.boxPublicKey,32)||!b64(b.signingPublicKey,32))return reply({error:"Datos de registro inválidos."},400);
   const id=crypto.randomUUID(), tokenHash=await hash(b.authToken), now=Date.now();
-  try{await env.MESHBIT_DB.prepare("INSERT INTO users(id,username,auth_token_hash,box_public_key,signing_public_key,created_at) VALUES(?,?,?,?,?,?)").bind(id,b.username,tokenHash,b.boxPublicKey,b.signingPublicKey,now).run();return reply({id,username:b.username,boxPublicKey:b.boxPublicKey,signingPublicKey:b.signingPublicKey},201)}catch{return reply({error:"Ese usuario ya existe o no se pudo registrar."},409)}
+  try{await env.MESHBIT_DB.prepare("INSERT INTO users(id,username,auth_token_hash,box_public_key,signing_public_key,created_at) VALUES(?,?,?,?,?,?)").bind(id,b.username,tokenHash,b.boxPublicKey,b.signingPublicKey,now).run();return reply({id,username:b.username,boxPublicKey:b.boxPublicKey,signingPublicKey:b.signingPublicKey},201)}catch{const existing=await env.MESHBIT_DB.prepare("SELECT id,username,box_public_key,signing_public_key FROM users WHERE username=? COLLATE NOCASE AND auth_token_hash=?").bind(b.username,tokenHash).first();return existing?reply({id:existing.id,username:existing.username,boxPublicKey:existing.box_public_key,signingPublicKey:existing.signing_public_key},200):reply({error:"Ese usuario ya existe."},409)}
  }
  const auth=request.headers.get("authorization")||"", token=auth.startsWith("Bearer ")?auth.slice(7):"";
  if(!token)return reply({error:"Autenticación requerida."},401);
