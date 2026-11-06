@@ -31,6 +31,8 @@ jobs:
           java-version: "17"
       - name: Install dependencies
         run: npm install
+      - name: Typecheck encrypted messaging client
+        run: npm run typecheck
       - name: Generate clean native Android project
         run: npx expo prebuild --clean --platform android --non-interactive
       - name: Build optimized arm64 release APK
@@ -55,7 +57,7 @@ jobs:
           gh release create "$TAG" /tmp/meshbit-android-arm64.apk \
             --repo "$GITHUB_REPOSITORY" \
             --title "Meshbit Android test build ${{ github.run_number }}" \
-            --notes "TEST BUILD ONLY. UI preview; end-to-end encryption, online relay and Bluetooth mesh are NOT implemented. Do not use for private or sensitive messages. Android arm64 only."
+            --notes "TEST BUILD ONLY. Meshbit encrypted 1:1 messaging beta; key verification is manual, no Signal-style ratchet, no multi-device recovery, no independent security audit, and Bluetooth mesh is not implemented. Do not use for high-risk communications. Android arm64 only."
       - name: Upload optimized APK
         uses: actions/upload-artifact@v4
         with:
