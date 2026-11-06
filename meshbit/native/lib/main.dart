@@ -115,12 +115,16 @@ class MeshEngine {
     nodeId = prefs.getString('mesh.node') ?? _uuid.v4();
     await prefs.setString('mesh.node', nodeId);
     final dbPath = p.join(await getDatabasesPath(), 'meshbit_mesh.db');
-    _db = await openDatabase(dbPath, version:2, onCreate:(db,_) async {
+    _db = await openDatabase(dbPath, version:3, onCreate:(db,_) async {
       await db.execute('CREATE TABLE packets(id TEXT PRIMARY KEY, json TEXT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0, originated INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)');
+      await db.execute('CREATE TABLE forwards(packet_id TEXT NOT NULL, peer_id TEXT NOT NULL, ttl INTEGER NOT NULL, sent_at INTEGER NOT NULL, PRIMARY KEY(packet_id,peer_id))');
     }, onUpgrade:(db,oldVersion,newVersion) async {
       if(oldVersion < 2) await db.execute('ALTER TABLE packets ADD COLUMN originated INTEGER NOT NULL DEFAULT 0');
+      if(oldVersion < 3) await db.execute('CREATE TABLE forwards(packet_id TEXT NOT NULL, peer_id TEXT NOT NULL, ttl INTEGER NOT NULL, sent_at INTEGER NOT NULL, PRIMARY KEY(packet_id,peer_id))');
     });
-    await _db!.delete('packets', where:'created < ?', whereArgs:[DateTime.now().subtract(const Duration(days:7)).millisecondsSinceEpoch]);
+    final retentionCutoff = DateTime.now().subtract(const Duration(days:7)).millisecondsSinceEpoch;
+    await _db!.delete('packets', where:'created < ?', whereArgs:[retentionCutoff]);
+    await _db!.delete('forwards', where:'sent_at < ?', whereArgs:[retentionCutoff]);
     final rows = await _db!.query('packets');
     for (final row in rows) { try { _seen.add(row['id'] as String); } catch (_) {} }
     _nearby = NearbyService(localDisplayName:'MESHBIT', localPeerId:_uuid.v4());
@@ -270,7 +274,7 @@ class MeshEngine {
           final saved = MeshEnvelope.fromJson(jsonDecode(existing.first['json'] as String));
           final improved = env.forwarded();
           if (improved.ttl > saved.ttl) {
-            await _db!.update('packets', {'json':jsonEncode(improved.toJson()),'created':DateTime.now().millisecondsSinceEpoch}, where:'id=?', whereArgs:[env.id]);
+            await _db!.update('packets', {'json':jsonEncode(improved.toJson())}, where:'id=?', whereArgs:[env.id]);
             await _broadcast(improved, excludePeer:sourcePeer);
           }
         }
@@ -416,10 +420,25 @@ class MeshEngine {
       return;
     }
     final bytes = Uint8List.fromList(utf8.encode(jsonEncode(env.toJson())));
-    await Future.wait(neighbors.map((peer) => _nearby.sendBytes(peer.id, bytes)));
+    for (final peer in neighbors) {
+      try {
+        final prior = await _db!.query('forwards', where:'packet_id=? AND peer_id=?', whereArgs:[env.id,peer.id], limit:1);
+        if (prior.isNotEmpty && (prior.first['ttl'] as int) >= env.ttl) continue;
+        await _nearby.sendBytes(peer.id, bytes);
+        await _db!.insert('forwards', {
+          'packet_id':env.id,
+          'peer_id':peer.id,
+          'ttl':env.ttl,
+          'sent_at':DateTime.now().millisecondsSinceEpoch,
+        }, conflictAlgorithm:ConflictAlgorithm.replace);
+      } catch (_) {
+        // Do not mark failed transmissions as forwarded; the next reconnect retries them.
+      }
+    }
   }
+
   Future<void> _flush() async {
-    final rows = await _db!.query('packets', where:'delivered=0', orderBy:'created ASC', limit:100);
+    final rows = await _db!.query('packets', orderBy:'created ASC', limit:500);
     for (final row in rows) {
       try {
         final env = MeshEnvelope.fromJson(jsonDecode(row['json'] as String));
