@@ -35,7 +35,7 @@ export default {async fetch(request,env){
   if(recipient.id===user.id)return reply({error:"No puedes enviarte mensajes en esta versión."},400);
   const now=Date.now();const rate=await env.MESHBIT_DB.prepare("SELECT COUNT(*) AS n FROM messages WHERE sender_id=? AND created_at>?").bind(user.id,now-60000).first();if((rate?.n||0)>=60)return reply({error:"Límite temporal de envío alcanzado."},429);
   await env.MESHBIT_DB.prepare("DELETE FROM messages WHERE expires_at<?").bind(now).run();
-  try{await env.MESHBIT_DB.prepare("INSERT INTO messages(id,sender_id,recipient_id,ephemeral_public_key,nonce,ciphertext,signature,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?)").bind(b.id,user.id,recipient.id,b.ephemeralPublicKey,b.nonce,b.ciphertext,b.signature,now,now+7*86400000).run();return reply({accepted:true,id:b.id},201)}catch{return reply({accepted:true,id:b.id,duplicate:true},200)}
+  try{await env.MESHBIT_DB.prepare("INSERT INTO messages(id,sender_id,recipient_id,ephemeral_public_key,nonce,ciphertext,signature,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?)").bind(b.id,user.id,recipient.id,b.ephemeralPublicKey,b.nonce,b.ciphertext,b.signature,now,now+7*86400000).run();return reply({accepted:true,id:b.id},201)}catch{const duplicate=await env.MESHBIT_DB.prepare("SELECT id FROM messages WHERE id=? AND sender_id=?").bind(b.id,user.id).first();return duplicate?reply({accepted:true,id:b.id,duplicate:true},200):reply({error:"No se pudo guardar el mensaje cifrado."},500)}
  }
  if(p==="/api/inbox"&&request.method==="GET"){
   const now=Date.now();await env.MESHBIT_DB.prepare("DELETE FROM messages WHERE expires_at<?").bind(now).run();
