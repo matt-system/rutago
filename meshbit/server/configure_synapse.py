@@ -32,7 +32,7 @@ cfg["database"] = {
 for listener in cfg.get("listeners", []):
     if listener.get("port") == 8008:
         listener["bind_addresses"] = ["0.0.0.0"]
-        listener["resources"] = [{"names": ["client", "federation"], "compress": True}]
+        listener["resources"] = [{"names": ["client"], "compress": True}]
 # This private beta is not federated: do not expose 8448; only Caddy's 443 is public.
 cfg["trusted_key_servers"] = []
 with open(path, "w", encoding="utf-8") as f:
