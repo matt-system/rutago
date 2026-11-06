@@ -7,7 +7,11 @@ on:
       - feature/meshbit-app
     paths:
       - "meshbit/**"
-      - ".github/workflows/meshbit-ios-simulator.yml"
+      - "!meshbit/native/**"
+
+concurrency:
+  group: meshbit-legacy-ios-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-ios-simulator:
