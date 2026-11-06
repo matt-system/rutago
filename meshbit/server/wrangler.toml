@@ -1,0 +1,9 @@
+name = "meshbit"
+main = "worker.js"
+compatibility_date = "2026-11-06"
+workers_dev = true
+
+[[d1_databases]]
+binding = "MESHBIT_DB"
+database_name = "meshbit-private-messages"
+database_id = "7f4a69ac-abe2-4d50-8bf9-96dd2619c75e"
