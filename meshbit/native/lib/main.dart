@@ -540,6 +540,7 @@ class _MeshHomeState extends State<MeshHome> {
   bool pinConfirmed = false;
   bool outgoingPinConfirmed = false;
   bool _refreshing = false;
+  bool _refreshPending = false;
 
   bool get _isPublicChat => selectedTab == 0;
   String get _conversationId => _isPublicChat ? MeshEngine.publicChannelId : (selectedContactId ?? '');
@@ -588,7 +589,8 @@ class _MeshHomeState extends State<MeshHome> {
   }
 
   Future<void> _reloadConversation() async {
-    if (_refreshing || !mounted || (publicKey.isEmpty && _isPublicChat)) return;
+    if (!mounted || (publicKey.isEmpty && _isPublicChat)) return;
+    if (_refreshing) { _refreshPending = true; return; }
     final conversationId = _conversationId;
     if (conversationId.isEmpty) {
       if (mounted) setState(() => messages = []);
@@ -605,6 +607,10 @@ class _MeshHomeState extends State<MeshHome> {
       if (mounted && conversationId == _conversationId) setState(() => messages = loaded);
     } finally {
       _refreshing = false;
+      if (_refreshPending && mounted) {
+        _refreshPending = false;
+        _reloadConversation();
+      }
     }
   }
 
@@ -1082,9 +1088,9 @@ class _MeshHomeState extends State<MeshHome> {
     body: IndexedStack(
       index: selectedTab,
       children: [
-        _buildChat(),
-        selectedContactId == null ? _buildContacts() : _buildChat(),
-        _buildNodes(),
+        selectedTab == 0 ? _buildChat() : const SizedBox.shrink(),
+        selectedTab == 1 ? (selectedContactId == null ? _buildContacts() : _buildChat()) : const SizedBox.shrink(),
+        selectedTab == 2 ? _buildNodes() : const SizedBox.shrink(),
       ],
     ),
     bottomNavigationBar: NavigationBar(
