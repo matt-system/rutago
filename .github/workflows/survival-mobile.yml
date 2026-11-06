@@ -31,6 +31,9 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools'
+      - name: Install BLE plugin dependencies
+        working-directory: survival/mobile-app
+        run: npm install --prefix ../mesh-plugin
       - name: Install dependencies
         working-directory: survival/mobile-app
         run: npm install
