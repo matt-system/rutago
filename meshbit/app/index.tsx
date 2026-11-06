@@ -1,7 +1,7 @@
 import React, {useEffect, useRef, useState} from "react";
 import {View,Text,TextInput,Pressable,ScrollView,KeyboardAvoidingView,Platform,StyleSheet,ActivityIndicator} from "react-native";
 import * as SecureStore from "expo-secure-store";
-import {Identity,generateIdentity,encryptMessage,decryptMessage,fingerprint,newAuthToken,IncomingEnvelope} from "../src/crypto/e2ee";
+import {Identity,generateIdentity,encryptMessage,decryptMessage,fingerprint,newAuthToken} from "../src/crypto/e2ee";
 import * as Api from "../src/crypto/api";
 
 type ChatItem={id:string;sender:string;body:string;mine:boolean;time:number};
