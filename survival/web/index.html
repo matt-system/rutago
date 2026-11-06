@@ -32,9 +32,15 @@ input,textarea,.search{font-size:16px;min-height:50px}
 .library-label{display:block;font-weight:800;font-size:17px;margin:16px 0 8px}.guide-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.guide-toolbar h3{font-size:23px;margin:5px 0}.guide-toolbar p{margin:0}.guide-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
 .guide-body{font-size:17px;line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere;color:#e4eee3;border-top:1px solid var(--line);padding-top:16px}
 .guide-sources{display:flex;flex-direction:column;gap:8px;margin:16px 0}.guide-sources a{color:#b8dda9;font-size:14px;overflow-wrap:anywhere}
-.easy-toggle{white-space:nowrap}.easy-mode{font-size:20px!important}.easy-mode p,.easy-mode .muted,.easy-mode .notice,.easy-mode .book p{font-size:18px!important;line-height:1.8!important}.easy-mode button,.easy-mode .btn{font-size:17px!important;min-height:58px!important}.easy-mode .book strong{font-size:20px!important}.easy-mode .guide-body{font-size:21px!important;line-height:1.9!important}.easy-mode .nav button{font-size:17px!important}
-@media(max-width:900px){.quick-survival{grid-template-columns:repeat(2,minmax(0,1fr))}.topright{gap:6px}.easy-toggle{font-size:11px!important;padding:8px}}
 @media(max-width:520px){.quick-guide{min-height:128px;padding:12px}.book-grid{grid-template-columns:1fr}.guide-toolbar{flex-direction:column}.guide-toolbar .btn{width:100%}.topright .status{display:none}}
+
+.home-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.home-action{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:8px;min-height:150px;padding:18px;background:#101b14;color:var(--text);border:1px solid var(--line);border-radius:9px;cursor:pointer}
+.home-action span{font-size:30px;line-height:1.2}.home-action b{font-size:17px;color:var(--green)}.home-action small{font-size:14px;color:var(--muted);line-height:1.45}
+.home-bottom{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.nav button{cursor:pointer}
+@media(max-width:760px){.home-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.home-bottom{grid-template-columns:1fr}}
+@media(max-width:420px){.home-actions{grid-template-columns:1fr}.home-action{min-height:110px;display:grid;grid-template-columns:44px 1fr;align-content:center}.home-action span{grid-row:span 2}.home-action small{grid-column:2}}
 </style>
 </head>
 <body>
@@ -53,22 +59,20 @@ input,textarea,.search{font-size:16px;min-height:50px}
  <div class="side-foot"><span class="dot"></span><b id="netLabel">Comprobando conexión</b><br>Tu espacio de conocimiento personal. Los datos guardados localmente permanecen en este dispositivo.</div>
 </aside>
 <main class="main">
- <header class="top"><div><div class="eyebrow">KNOWLEDGE THAT STAYS</div><h1 id="pageTitle">SURVIVAL</h1></div><div class="topright"><button class="btn secondary easy-toggle" id="easyModeBtn" onclick="toggleEasyMode()" aria-pressed="false">A+ TEXTO GRANDE</button><div class="status"><b id="onlineText">● En línea</b></div><div class="avatar">SV</div></div></header>
+ <header class="top"><div><div class="eyebrow">KNOWLEDGE THAT STAYS</div><h1 id="pageTitle">SURVIVAL</h1></div><div class="topright"><div class="status"><b id="onlineText">● En línea</b></div><div class="avatar">SV</div></div></header>
  <section id="home" class="section active">
-  <div class="grid">
-   <article class="card hero"><span class="tag">TU CENTRO DE PREPARACIÓN</span><h2>El conocimiento no debería depender de Internet.</h2><p>Una base personal para aprender, prepararte y mantener a mano información esencial, incluso cuando no hay conexión.</p><button class="btn" onclick="go('library')">Explorar biblioteca →</button></article>
-   <article class="card metric"><div class="label">Notas guardadas</div><div class="num" id="noteCount">0</div><p>En este dispositivo</p></article>
-   <article class="card metric"><div class="label">Guías esenciales</div><div class="num">26</div><p>Guías disponibles sin conexión</p></article>
-   <article class="card wide"><h3>Acceso rápido</h3><p>Herramientas y recursos principales de SURVIVAL.</p><div class="tile-list">
-    <div class="tile" onclick="go('library')"><div class="tile-icon">📚</div><div><strong>Biblioteca de conocimiento</strong><small>Guías prácticas y referencias</small></div><span class="arrow">→</span></div>
-    <div class="tile" onclick="go('maps')"><div class="tile-icon">🗺️</div><div><strong>Mapas y orientación</strong><small>Explora mapas y prepara zonas offline</small></div><span class="arrow">→</span></div>
-    <div class="tile" onclick="go('assistant')"><div class="tile-icon">✳️</div><div><strong>Asistente local</strong><small>Conecta con Ollama en tu servidor</small></div><span class="arrow">→</span></div>
-   </div></article>
-   <article class="card narrow"><h3>Antes de desconectarte</h3><p>Una pequeña lista para preparar tu equipo.</p><div class="tile-list">
-    <div class="tile"><div class="tile-icon">⬇</div><div><strong>Descarga tus recursos</strong><small>Libros, mapas y manuales</small></div></div>
-    <div class="tile"><div class="tile-icon">🔋</div><div><strong>Revisa energía y respaldo</strong><small>Baterías, cargadores y copias</small></div></div>
-    <div class="tile"><div class="tile-icon">🧪</div><div><strong>Prueba el modo avión</strong><small>Comprueba qué funciona sin red</small></div></div>
-   </div></article>
+  <div class="section-title"><h2>¿Qué necesitas?</h2><p>Elige una opción. Instrucciones claras para prepararte y actuar.</p></div>
+  <div class="home-actions">
+   <button class="home-action" onclick="openGuide('agua');go('library')"><span>💧</span><b>Conseguir agua segura</b><small>Filtrar y desinfectar agua</small></button>
+   <button class="home-action" onclick="openGuide('hacer-fuego');go('library')"><span>🔥</span><b>Hacer fuego</b><small>Encenderlo con seguridad</small></button>
+   <button class="home-action" onclick="openGuide('apagones');go('library')"><span>🔦</span><b>Qué hacer en un apagón</b><small>Pasos para protegerse</small></button>
+   <button class="home-action" onclick="openGuide('kit-hogar');go('library')"><span>🎒</span><b>Preparar mi mochila</b><small>Lo esencial para emergencias</small></button>
+   <button class="home-action" onclick="go('library')"><span>📚</span><b>Ver todas las guías</b><small>Aprender y consultar</small></button>
+   <button class="home-action" onclick="go('mesh')"><span>📡</span><b>Chat cercano</b><small>Mensajes locales de esta versión</small></button>
+  </div>
+  <div class="home-bottom">
+   <article class="card"><div class="eyebrow">RECUERDA</div><h3>Primero, ponte a salvo.</h3><p>Aléjate del peligro inmediato. Si hay una emergencia en Chile, llama al 131 (SAMU), 132 (Bomberos) o 133 (Carabineros), si la red telefónica está disponible.</p></article>
+   <article class="card"><div class="eyebrow">TU INFORMACIÓN</div><h3><span id="noteCount">0</span> notas guardadas</h3><p>Guarda datos útiles para tu familia y consúltalos desde Notas.</p><button class="btn secondary" onclick="go('notes')">Abrir mis notas</button></article>
   </div>
  </section>
  <section id="library" class="section">
@@ -191,8 +195,6 @@ function openGuide(id){
 function closeGuide(){stopGuideAloud();document.getElementById("guidePanel").style.display="none"}
 function readGuideAloud(){if(!currentGuide||!("speechSynthesis" in window)){alert("La lectura en voz alta no está disponible en este navegador.");return}stopGuideAloud();const utterance=new SpeechSynthesisUtterance(currentGuide.title+". "+currentGuide.body);utterance.lang="es-CL";utterance.rate=document.body.classList.contains("easy-mode")?0.82:0.95;window.speechSynthesis.speak(utterance)}
 function stopGuideAloud(){if("speechSynthesis" in window)window.speechSynthesis.cancel()}
-function toggleEasyMode(){const on=document.body.classList.toggle("easy-mode");localStorage.setItem("survival-easy-mode",on?"1":"0");const b=document.getElementById("easyModeBtn");b.textContent=on?"A− TEXTO NORMAL":"A+ TEXTO GRANDE";b.setAttribute("aria-pressed",on?"true":"false")}
-function restoreEasyMode(){if(localStorage.getItem("survival-easy-mode")==="1"){document.body.classList.add("easy-mode");const b=document.getElementById("easyModeBtn");if(b){b.textContent="A− TEXTO NORMAL";b.setAttribute("aria-pressed","true")}}}
 function getNotes(){try{return JSON.parse(localStorage.getItem("survival-notes")||"[]")}catch{return[]}}
 function renderNotes(){let ns=getNotes();document.getElementById("noteCount").textContent=ns.length;document.getElementById("notesList").innerHTML=ns.map((n,i)=>'<div class="tile"><div class="tile-icon">📝</div><div style="min-width:0;flex:1"><strong>'+esc(n.title)+'</strong><small>'+esc(n.body.slice(0,110))+'</small></div><button class="btn ghost" onclick="deleteNote('+i+')">✕</button></div>').join("")||'<p class="muted">Todavía no hay notas guardadas.</p>'}
 function saveNote(){let title=document.getElementById("noteTitle").value.trim()||"Nota sin título",body=document.getElementById("noteBody").value.trim();if(!body){alert("Escribe algo antes de guardar.");return}let ns=getNotes();ns.unshift({title,body,date:new Date().toISOString()});localStorage.setItem("survival-notes",JSON.stringify(ns));clearNoteForm();renderNotes()}
@@ -216,7 +218,7 @@ async function startMeshDiscovery(){const state=document.getElementById("meshSta
 const _go=go;go=function(page){_go(page);if(page==="mesh")renderMesh()};
 \nfunction net(){let on=navigator.onLine;document.getElementById("onlineText").textContent=on?"● En línea":"● Sin conexión";document.getElementById("netLabel").textContent=on?"Conectividad disponible":"Modo sin conexión";document.getElementById("sysNetwork").textContent=on?"Conectado a Internet":"Sin conexión a Internet"}
 document.querySelectorAll("[data-check]").forEach(el=>{el.checked=localStorage.getItem("survival-check-"+el.dataset.check)==="1";el.addEventListener("change",()=>localStorage.setItem("survival-check-"+el.dataset.check,el.checked?"1":"0"))});
-window.addEventListener("online",net);window.addEventListener("offline",net);net();renderNotes();renderMesh();restoreEasyMode();loadKnowledge();checkLocal();
+window.addEventListener("online",net);window.addEventListener("offline",net);net();renderNotes();renderMesh();loadKnowledge();checkLocal();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 </script>
 </body></html>
