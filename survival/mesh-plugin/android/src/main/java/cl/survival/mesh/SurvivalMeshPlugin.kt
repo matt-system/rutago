@@ -4,13 +4,12 @@ import android.Manifest
 import android.bluetooth.*
 import android.bluetooth.le.*
 import android.content.Context
-import android.os.ParcelUuid
 import android.os.Build
+import android.os.ParcelUuid
 import android.util.Base64
 import com.getcapacitor.*
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
-import com.getcapacitor.annotation.PermissionCallback
 import com.getcapacitor.annotation.PermissionCallback
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -23,8 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
             Manifest.permission.BLUETOOTH_CONNECT,
             Manifest.permission.BLUETOOTH_ADVERTISE
         ]),
-        Permission(alias = "legacyLocation", strings = [Manifest.permission.ACCESS_FINE_LOCATION
-        ])
+        Permission(alias = "legacyLocation", strings = [Manifest.permission.ACCESS_FINE_LOCATION])
     ]
 )
 class SurvivalMeshPlugin : Plugin() {
@@ -32,7 +30,9 @@ class SurvivalMeshPlugin : Plugin() {
         val SERVICE = UUID.fromString("8F3A0001-7B2C-4D91-A8F0-535552564956")
         val RX = UUID.fromString("8F3A0002-7B2C-4D91-A8F0-535552564956")
         val TX = UUID.fromString("8F3A0003-7B2C-4D91-A8F0-535552564956")
+        val CCCD = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
+
     private lateinit var adapter: BluetoothAdapter
     private var scanner: BluetoothLeScanner? = null
     private var advertiser: BluetoothLeAdvertiser? = null
@@ -40,10 +40,8 @@ class SurvivalMeshPlugin : Plugin() {
     private var scanCallback: ScanCallback? = null
     private val clients = ConcurrentHashMap<String, BluetoothGatt>()
     private val rxChars = ConcurrentHashMap<String, BluetoothGattCharacteristic>()
-    private val txChars = ConcurrentHashMap<String, BluetoothGattCharacteristic>()
     private val connectedClientIds = ConcurrentHashMap.newKeySet<String>()
     private val connectedServers = ConcurrentHashMap<String, BluetoothDevice>()
-    private val connectedClientIds = ConcurrentHashMap.newKeySet<String>()
     private var txServer: BluetoothGattCharacteristic? = null
     private var started = false
     private var deviceName = "SURVIVAL"
@@ -51,8 +49,9 @@ class SurvivalMeshPlugin : Plugin() {
     @PluginMethod
     fun start(call: PluginCall) {
         deviceName = call.getString("deviceName") ?: "SURVIVAL"
-        if (getPermissionState("bluetooth") != PermissionState.GRANTED) {
-            requestPermissionForAlias("bluetooth", call, "startWithPermission")
+        val alias = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) "bluetooth" else "legacyLocation"
+        if (getPermissionState(alias) != PermissionState.GRANTED) {
+            requestPermissionForAlias(alias, call, "startWithPermission")
             return
         }
         startWithPermission(call)
@@ -62,19 +61,15 @@ class SurvivalMeshPlugin : Plugin() {
     fun startWithPermission(call: PluginCall) {
         try {
             val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-            adapter = manager.adapter
+            adapter = manager.adapter ?: run { call.reject("Este teléfono no tiene Bluetooth LE"); return }
             if (!adapter.isEnabled) { call.reject("Activa Bluetooth para usar el chat"); return }
             started = true
-            adapter.name = deviceName
             scanner = adapter.bluetoothLeScanner
             advertiser = adapter.bluetoothLeAdvertiser
             startGattServer(manager)
             startAdvertising()
             startScanning()
-            val ret = JSObject()
-            ret.put("deviceId", UUID.randomUUID().toString())
-            ret.put("scanning", true); ret.put("advertising", true)
-            call.resolve(ret)
+            call.resolve(JSObject().put("deviceId", "android-${adapter.address ?: "local"}").put("scanning", true).put("advertising", true))
         } catch (e: Exception) { call.reject("No se pudo iniciar BLE: ${e.message}") }
     }
 
@@ -83,40 +78,52 @@ class SurvivalMeshPlugin : Plugin() {
         server = manager.openGattServer(context, serverCallback)
         val rx = BluetoothGattCharacteristic(RX, BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE, BluetoothGattCharacteristic.PERMISSION_WRITE)
         val tx = BluetoothGattCharacteristic(TX, BluetoothGattCharacteristic.PROPERTY_NOTIFY or BluetoothGattCharacteristic.PROPERTY_READ, BluetoothGattCharacteristic.PERMISSION_READ)
-        tx.addDescriptor(BluetoothGattDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"), BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE))
+        tx.addDescriptor(BluetoothGattDescriptor(CCCD, BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE))
         txServer = tx
         val service = BluetoothGattService(SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-        service.addCharacteristic(rx); service.addCharacteristic(tx)
+        service.addCharacteristic(rx)
+        service.addCharacteristic(tx)
         server?.addService(service)
     }
 
     private fun startAdvertising() {
-        val settings = AdvertiseSettings.Builder().setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY).setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM).setConnectable(true).build()
+        val settings = AdvertiseSettings.Builder()
+            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
+            .setConnectable(true).build()
         val data = AdvertiseData.Builder().addServiceUuid(ParcelUuid(SERVICE)).setIncludeDeviceName(false).build()
         advertiser?.startAdvertising(settings, data, advertiseCallback)
     }
+
     private fun startScanning() {
         val filter = ScanFilter.Builder().setServiceUuid(ParcelUuid(SERVICE)).build()
         val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
         scanCallback = object : ScanCallback() {
             override fun onScanResult(type: Int, result: ScanResult) {
-                val d = result.device
-                val id = d.address ?: return
-                notifyListeners("peer", JSObject().apply {
-                    put("id", id); put("name", d.name ?: "SURVIVAL"); put("rssi", result.rssi); put("connected", connectedClientIds.contains(id))
-                })
+                val device = result.device
+                val id = device.address ?: return
+                notifyListeners("peer", JSObject().put("id", id).put("name", device.name ?: "SURVIVAL").put("rssi", result.rssi).put("connected", connectedClientIds.contains(id)))
                 if (!clients.containsKey(id)) {
-                    try { clients[id] = d.connectGatt(context, false, clientCallback, BluetoothDevice.TRANSPORT_LE) } catch (_: Exception) {}
+                    try { clients[id] = device.connectGatt(context, false, clientCallback, BluetoothDevice.TRANSPORT_LE) }
+                    catch (_: Exception) { }
                 }
             }
-            override fun onScanFailed(errorCode: Int) { notifyListeners("state", JSObject().put("state", "error").put("detail", "BLE scan error $errorCode")) }
+            override fun onScanFailed(errorCode: Int) {
+                notifyListeners("state", JSObject().put("state", "error").put("detail", "BLE scan error $errorCode"))
+            }
         }
         scanner?.startScan(listOf(filter), settings, scanCallback)
     }
+
     private val advertiseCallback = object : AdvertiseCallback() {
-        override fun onStartSuccess(settings: AdvertiseSettings) { notifyListeners("state", JSObject().put("state", "ready").put("detail", "Advertising")) }
-        override fun onStartFailure(errorCode: Int) { notifyListeners("state", JSObject().put("state", "error").put("detail", "BLE advertise error $errorCode")) }
+        override fun onStartSuccess(settings: AdvertiseSettings) {
+            notifyListeners("state", JSObject().put("state", "ready").put("detail", "Advertising"))
+        }
+        override fun onStartFailure(errorCode: Int) {
+            notifyListeners("state", JSObject().put("state", "error").put("detail", "BLE advertise error $errorCode"))
+        }
     }
+
     private val serverCallback = object : BluetoothGattServerCallback() {
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) connectedServers[device.address] = device
@@ -132,24 +139,28 @@ class SurvivalMeshPlugin : Plugin() {
             if (responseNeeded) server?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value)
         }
     }
+
     private val clientCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-            if (newState == BluetoothProfile.STATE_CONNECTED) { connectedClientIds.add(gatt.device.address); if (!gatt.requestMtu(185)) gatt.discoverServices() }
-            else { connectedClientIds.remove(gatt.device.address); clients.remove(gatt.device.address); rxChars.remove(gatt.device.address); txChars.remove(gatt.device.address); gatt.close() }
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                connectedClientIds.add(gatt.device.address)
+                if (!gatt.requestMtu(185)) gatt.discoverServices()
+            } else {
+                connectedClientIds.remove(gatt.device.address)
+                clients.remove(gatt.device.address)
+                rxChars.remove(gatt.device.address)
+                gatt.close()
+            }
         }
-        override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
-            if (status == BluetoothGatt.GATT_SUCCESS) gatt.discoverServices()
-            else gatt.discoverServices()
-        }
+        override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) { gatt.discoverServices() }
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             val service = gatt.getService(SERVICE) ?: return
             service.getCharacteristic(RX)?.let { rxChars[gatt.device.address] = it }
-            service.getCharacteristic(TX)?.let { c ->
-                txChars[gatt.device.address] = c
-                gatt.setCharacteristicNotification(c, true)
-                c.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))?.let { d ->
-                    d.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                    gatt.writeDescriptor(d)
+            service.getCharacteristic(TX)?.let { characteristic ->
+                gatt.setCharacteristicNotification(characteristic, true)
+                characteristic.getDescriptor(CCCD)?.let { descriptor ->
+                    descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    gatt.writeDescriptor(descriptor)
                 }
             }
         }
@@ -165,6 +176,7 @@ class SurvivalMeshPlugin : Plugin() {
     fun send(call: PluginCall) {
         val encoded = call.getString("data") ?: run { call.reject("Falta data"); return }
         val bytes = try { Base64.decode(encoded, Base64.DEFAULT) } catch (_: Exception) { call.reject("Base64 inválido"); return }
+        if (bytes.size > 160) { call.reject("Mensaje demasiado grande para el enlace BLE"); return }
         var sent = 0
         for ((id, gatt) in clients) {
             val characteristic = rxChars[id] ?: continue
@@ -175,7 +187,9 @@ class SurvivalMeshPlugin : Plugin() {
         val tx = txServer
         if (tx != null) {
             tx.value = bytes
-            for (device in connectedServers.values) if (server?.notifyCharacteristicChanged(device, tx, false) == true) sent++
+            for (device in connectedServers.values) {
+                if (server?.notifyCharacteristicChanged(device, tx, false) == true) sent++
+            }
         }
         call.resolve(JSObject().put("sent", sent))
     }
@@ -184,15 +198,20 @@ class SurvivalMeshPlugin : Plugin() {
     fun getPeers(call: PluginCall) {
         val arr = JSArray()
         clients.forEach { (id, gatt) -> arr.put(JSObject().put("id", id).put("name", gatt.device.name ?: "SURVIVAL").put("connected", connectedClientIds.contains(id))) }
-        connectedServers.forEach { (id, d) -> arr.put(JSObject().put("id", id).put("name", d.name ?: "SURVIVAL").put("connected", true)) }
+        connectedServers.forEach { (id, device) -> arr.put(JSObject().put("id", id).put("name", device.name ?: "SURVIVAL").put("connected", true)) }
         call.resolve(JSObject().put("peers", arr))
     }
 
     @PluginMethod
     fun stop(call: PluginCall) {
         started = false
-        try { scanCallback?.let { scanner?.stopScan(it) }; advertiser?.stopAdvertising(advertiseCallback); clients.values.forEach { it.disconnect(); it.close() }; clients.clear(); server?.close(); server = null }
-        catch (_: Exception) {}
+        try {
+            scanCallback?.let { scanner?.stopScan(it) }
+            advertiser?.stopAdvertising(advertiseCallback)
+            clients.values.forEach { it.disconnect(); it.close() }
+            clients.clear(); connectedClientIds.clear(); connectedServers.clear()
+            server?.close(); server = null
+        } catch (_: Exception) { }
         call.resolve()
     }
 }
