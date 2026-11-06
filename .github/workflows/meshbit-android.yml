@@ -1,4 +1,4 @@
-name: Meshbit Android APK
+name: Meshbit Android APK (optimized)
 
 on:
   workflow_dispatch:
@@ -29,17 +29,23 @@ jobs:
           java-version: "17"
       - name: Install dependencies
         run: npm install
-      - name: Generate native Android project
-        run: npx expo prebuild --platform android --non-interactive
-      - name: Build installable debug APK
+      - name: Generate clean native Android project
+        run: npx expo prebuild --clean --platform android --non-interactive
+      - name: Build optimized arm64 release APK
         working-directory: meshbit/android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug
-      - name: Upload APK
+          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+      - name: Report APK size
+        working-directory: meshbit
+        run: |
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          ls -lh "$APK"
+          du -h "$APK"
+      - name: Upload optimized APK
         uses: actions/upload-artifact@v4
         with:
-          name: meshbit-android-debug-apk
-          path: meshbit/android/app/build/outputs/apk/debug/app-debug.apk
+          name: meshbit-android-arm64-release-apk
+          path: meshbit/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
