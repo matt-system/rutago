@@ -1,7 +1,17 @@
-plugins { id 'com.android.library' }
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
 android {
     namespace 'cl.survival.mesh'
     compileSdk 35
-    defaultConfig { minSdk 23 }
+
+    defaultConfig {
+        minSdk 23
+    }
 }
-dependencies { implementation project(':capacitor-android') }
+
+dependencies {
+    implementation project(':capacitor-android')
+}
