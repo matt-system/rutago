@@ -8,6 +8,9 @@ on:
       - '.github/workflows/survival-mobile.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -24,27 +27,31 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
       - name: Install dependencies
         working-directory: survival/mobile-app
         run: npm install
-      - name: Build web assets
+      - name: TypeScript and web build
         working-directory: survival/mobile-app
         run: npm run build
-      - name: Generate Android project
+      - name: Generate Android project and sync BLE plugin
         working-directory: survival/mobile-app
-        run: npx cap add android
-      - name: Sync native plugin
-        working-directory: survival/mobile-app
-        run: npx cap sync android
+        run: |
+          npx cap add android
+          npx cap sync android
       - name: Build debug APK
         working-directory: survival/mobile-app/android
-        run: ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
+        run: ./gradlew --no-daemon assembleDebug
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
         with:
           name: survival-android-debug
           path: survival/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 14
 
   ios-simulator:
     runs-on: macos-15
@@ -55,18 +62,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: survival/mobile-app/package.json
       - name: Install dependencies
         working-directory: survival/mobile-app
         run: npm install
-      - name: Build web assets
+      - name: TypeScript and web build
         working-directory: survival/mobile-app
         run: npm run build
-      - name: Generate iOS project
+      - name: Generate iOS project and sync BLE plugin
         working-directory: survival/mobile-app
-        run: npx cap add ios
-      - name: Sync native plugin
-        working-directory: survival/mobile-app
-        run: npx cap sync ios
+        run: |
+          npx cap add ios
+          npx cap sync ios
       - name: Add Bluetooth privacy descriptions
         working-directory: survival/mobile-app
         run: |
