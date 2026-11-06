@@ -4,12 +4,12 @@ import android.Manifest
 import android.bluetooth.*
 import android.bluetooth.le.*
 import android.content.Context
-import android.os.Build
 import android.os.ParcelUuid
 import android.util.Base64
 import com.getcapacitor.*
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -19,7 +19,8 @@ import java.util.concurrent.ConcurrentHashMap
         Permission(alias = "bluetooth", strings = [
             Manifest.permission.BLUETOOTH_SCAN,
             Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.BLUETOOTH_ADVERTISE
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+            Manifest.permission.ACCESS_FINE_LOCATION
         ])
     ]
 )
@@ -38,6 +39,7 @@ class SurvivalMeshPlugin : Plugin() {
     private val rxChars = ConcurrentHashMap<String, BluetoothGattCharacteristic>()
     private val txChars = ConcurrentHashMap<String, BluetoothGattCharacteristic>()
     private val connectedServers = ConcurrentHashMap<String, BluetoothDevice>()
+    private val connectedClientIds = ConcurrentHashMap.newKeySet<String>()
     private var txServer: BluetoothGattCharacteristic? = null
     private var started = false
     private var deviceName = "SURVIVAL"
@@ -52,7 +54,7 @@ class SurvivalMeshPlugin : Plugin() {
         startWithPermission(call)
     }
 
-    @PluginMethod
+    @PermissionCallback
     fun startWithPermission(call: PluginCall) {
         try {
             val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -97,7 +99,7 @@ class SurvivalMeshPlugin : Plugin() {
                 val d = result.device
                 val id = d.address ?: return
                 notifyListeners("peer", JSObject().apply {
-                    put("id", id); put("name", d.name ?: "SURVIVAL"); put("rssi", result.rssi); put("connected", clients[id]?.connected == true)
+                    put("id", id); put("name", d.name ?: "SURVIVAL"); put("rssi", result.rssi); put("connected", connectedClientIds.contains(id))
                 })
                 if (!clients.containsKey(id)) {
                     try { clients[id] = d.connectGatt(context, false, clientCallback, BluetoothDevice.TRANSPORT_LE) } catch (_: Exception) {}
@@ -128,8 +130,12 @@ class SurvivalMeshPlugin : Plugin() {
     }
     private val clientCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-            if (newState == BluetoothProfile.STATE_CONNECTED) gatt.discoverServices()
-            else { clients.remove(gatt.device.address); rxChars.remove(gatt.device.address); txChars.remove(gatt.device.address); gatt.close() }
+            if (newState == BluetoothProfile.STATE_CONNECTED) { connectedClientIds.add(gatt.device.address); gatt.requestMtu(185) }
+            else { connectedClientIds.remove(gatt.device.address); clients.remove(gatt.device.address); rxChars.remove(gatt.device.address); txChars.remove(gatt.device.address); gatt.close() }
+        }
+        override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) gatt.discoverServices()
+            else gatt.discoverServices()
         }
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             val service = gatt.getService(SERVICE) ?: return
@@ -173,7 +179,7 @@ class SurvivalMeshPlugin : Plugin() {
     @PluginMethod
     fun getPeers(call: PluginCall) {
         val arr = JSArray()
-        clients.forEach { (id, gatt) -> arr.put(JSObject().put("id", id).put("name", gatt.device.name ?: "SURVIVAL").put("connected", gatt.connected)) }
+        clients.forEach { (id, gatt) -> arr.put(JSObject().put("id", id).put("name", gatt.device.name ?: "SURVIVAL").put("connected", connectedClientIds.contains(id))) }
         connectedServers.forEach { (id, d) -> arr.put(JSObject().put("id", id).put("name", d.name ?: "SURVIVAL").put("connected", true)) }
         call.resolve(JSObject().put("peers", arr))
     }
