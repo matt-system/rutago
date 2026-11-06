@@ -92,8 +92,10 @@ class MeshEngine {
     _nearby = NearbyService(localDisplayName:'MESHBIT', localPeerId:_uuid.v4());
     _initialized = true;
     final dbPath = p.join(await getDatabasesPath(), 'meshbit_mesh.db');
-    _db = await openDatabase(dbPath, version:1, onCreate:(db,_) async {
-      await db.execute('CREATE TABLE packets(id TEXT PRIMARY KEY, json TEXT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)');
+    _db = await openDatabase(dbPath, version:2, onCreate:(db,_) async {
+      await db.execute('CREATE TABLE packets(id TEXT PRIMARY KEY, json TEXT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0, originated INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)');
+    }, onUpgrade:(db,oldVersion,newVersion) async {
+      if(oldVersion < 2) await db.execute('ALTER TABLE packets ADD COLUMN originated INTEGER NOT NULL DEFAULT 0');
     });
     await _db!.delete('packets', where:'created < ?', whereArgs:[DateTime.now().subtract(const Duration(days:7)).millisecondsSinceEpoch]);
     final rows = await _db!.query('packets');
@@ -170,7 +172,7 @@ class MeshEngine {
     final box = await _aes.encrypt(utf8.encode(inner), secretKey:SecretKey(key));
     final envelope = MeshEnvelope(id:_uuid.v4(),ttl:12,nonce:base64Encode(box.nonce),cipherText:base64Encode(box.cipherText),mac:base64Encode(box.mac.bytes));
     _seen.add(envelope.id);
-    await _store(envelope);
+    await _store(envelope, originated:true);
     await _broadcast(envelope);
     onStatus('Mensaje cifrado guardado y enviado a la red. Se reenviará si aparece otra ruta.');
   }
@@ -210,8 +212,14 @@ class MeshEngine {
     return '${decoded['from']}: ${decoded['text']}';
   }
 
-  Future<void> _store(MeshEnvelope env) async {
-    await _db!.insert('packets', {'id':env.id,'json':jsonEncode(env.toJson()),'created':DateTime.now().millisecondsSinceEpoch}, conflictAlgorithm:ConflictAlgorithm.ignore);
+  Future<void> _store(MeshEnvelope env, {bool originated = false}) async {
+    await _db!.insert('packets', {'id':env.id,'json':jsonEncode(env.toJson()),'originated':originated ? 1 : 0,'created':DateTime.now().millisecondsSinceEpoch}, conflictAlgorithm:ConflictAlgorithm.ignore);
+  }
+
+  Future<List<MeshEnvelope>> loadInbox() async {
+    await init();
+    final rows = await _db!.query('packets', where:'originated=0', orderBy:'created DESC', limit:100);
+    return rows.map((row) => MeshEnvelope.fromJson(jsonDecode(row['json'] as String) as Map<String,dynamic>)).toList();
   }
   Future<void> _broadcast(MeshEnvelope env) async {
     if (_nearby.connectedPeers.isEmpty) { onStatus('Sin vecinos conectados: mensaje guardado para retransmitir más tarde.'); return; }
@@ -293,7 +301,9 @@ class _MeshHomeState extends State<MeshHome> {
   final body = TextEditingController();
   final key = TextEditingController();
   bool busy = false;
-  @override void initState() { super.initState(); engine = MeshEngine((s)=>setState(()=>status=s),(m)=>setState((){if(!inbox.any((e)=>e.id==m.id)){inbox.insert(0,m); if(inbox.length>100) inbox.removeLast();}}),(p)=>setState(()=>peers=p)); }
+  @override void initState() { super.initState(); engine = MeshEngine((s)=>setState(()=>status=s),(m)=>setState((){if(!inbox.any((e)=>e.id==m.id)){inbox.insert(0,m); if(inbox.length>100) inbox.removeLast();}}),(p)=>setState(()=>peers=p)); _loadLocalInbox(); }
+  Future<void> _loadLocalInbox() async { try { final packets=await engine.loadInbox(); if(mounted) setState(()=>inbox..clear()..addAll(packets)); } catch(e) { if(mounted) notice('No se pudo abrir la bandeja local: $e'); } }
+  @override void didChangeDependencies() { super.didChangeDependencies(); }
   @override void dispose() { destination.dispose(); body.dispose(); key.dispose(); engine.dispose(); super.dispose(); }
   void notice(String s) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s))); }
   @override Widget build(BuildContext context) => Scaffold(
