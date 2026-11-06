@@ -67,7 +67,6 @@ class SurvivalMeshPlugin : Plugin() {
             scanner = adapter.bluetoothLeScanner
             advertiser = adapter.bluetoothLeAdvertiser
             startGattServer(manager)
-            startAdvertising()
             startScanning()
             call.resolve(JSObject().put("deviceId", "android-${adapter.address ?: "local"}").put("scanning", true).put("advertising", true))
         } catch (e: Exception) { call.reject("No se pudo iniciar BLE: ${e.message}") }
@@ -125,6 +124,10 @@ class SurvivalMeshPlugin : Plugin() {
     }
 
     private val serverCallback = object : BluetoothGattServerCallback() {
+        override fun onServiceAdded(status: Int, service: BluetoothGattService) {
+            if (status == BluetoothGatt.GATT_SUCCESS && started) startAdvertising()
+            else notifyListeners("state", JSObject().put("state", "error").put("detail", "No se pudo registrar el servicio Bluetooth"))
+        }
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) connectedServers[device.address] = device
             else connectedServers.remove(device.address)
