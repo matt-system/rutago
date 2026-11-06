@@ -10,7 +10,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -45,6 +45,17 @@ jobs:
       - name: Build release APK
         working-directory: meshbit/native
         run: flutter build apk --release
+      - name: Publish Android test APK
+        working-directory: meshbit/native
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: meshbit-native-test-${{ github.run_number }}
+        run: |
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          gh release create "$TAG" "$APK" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "MESHBIT Native Android test ${{ github.run_number }}" \
+            --notes "Experimental foreground Bluetooth LE mesh client. Offline mode does not use Wi-Fi, internet, or mobile data. Requires Bluetooth enabled and the app open on participating phones. Key exchange is manual. Not independently audited. Physical multi-phone tests are still required; do not use for high-risk communications."
       - uses: actions/upload-artifact@v4
         with:
           name: meshbit-native-android-apk
