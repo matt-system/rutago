@@ -49,33 +49,24 @@ input,textarea,.search{font-size:16px;min-height:50px}
 <aside class="side">
  <div class="brand"><div class="brandmark">S</div><div><strong>SURVIVAL</strong><small>OFFLINE KNOWLEDGE SYSTEM</small></div></div>
  <div><p class="nav-label">SURVIVAL</p><nav class="nav">
-  <button class="active" data-page="home"><span class="ico">⌂</span>Inicio</button>
+  <button data-page="home"><span class="ico">⌂</span>Inicio</button>
   <button data-page="library"><span class="ico">▤</span>Biblioteca</button>
   <button data-page="maps"><span class="ico">⌖</span>Mapas</button>
 
-  <button data-page="assistant"><span class="ico">✳</span>Asistente IA</button>
+  <button class="active" data-page="assistant"><span class="ico">✳</span>Asistente IA</button>
   <button data-page="mesh"><span class="ico">⌁</span>Chat cercano</button>
-  <button data-page="tools"><span class="ico">⌘</span>Herramientas</button>
   <button data-page="notes"><span class="ico">✎</span>Notas</button>
   <button data-page="system"><span class="ico">⚙</span>Sistema</button>
  </nav></div>
  <div class="side-foot"><span class="dot"></span><b id="netLabel">Comprobando conexión</b><br>Tu espacio de conocimiento personal. Los datos guardados localmente permanecen en este dispositivo.</div>
 </aside>
 <main class="main">
- <header class="top"><div><div class="eyebrow">KNOWLEDGE THAT STAYS</div><h1 id="pageTitle">SURVIVAL</h1></div><div class="topright"><div class="status"><b id="onlineText">● En línea</b></div><div class="avatar">SV</div></div></header>
- <section id="home" class="section active">
-  <div class="section-title"><h2>¿Qué necesitas?</h2><p>Elige una opción. Instrucciones claras para prepararte y actuar.</p></div>
-  <div class="home-actions">
-   <button class="home-action" onclick="go('library');openGuide('agua')"><span>💧</span><b>Conseguir agua segura</b><small>Filtrar y desinfectar agua</small></button>
-   <button class="home-action" onclick="go('library');openGuide('hacer-fuego')"><span>🔥</span><b>Hacer fuego</b><small>Encenderlo con seguridad</small></button>
-   <button class="home-action" onclick="go('library');openGuide('apagones')"><span>🔦</span><b>Qué hacer en un apagón</b><small>Pasos para protegerse</small></button>
-   <button class="home-action" onclick="go('library');openGuide('kit-hogar')"><span>🎒</span><b>Preparar mi mochila</b><small>Lo esencial para emergencias</small></button>
-   <button class="home-action" onclick="go('library')"><span>📚</span><b>Ver todas las guías</b><small>Aprender y consultar</small></button>
-   <button class="home-action" onclick="go('mesh')"><span>📡</span><b>Chat cercano</b><small>Mensajes locales de esta versión</small></button>
-  </div>
-  <div class="home-bottom">
-   <article class="card"><div class="eyebrow">RECUERDA</div><h3>Primero, ponte a salvo.</h3><p>Aléjate del peligro inmediato. Si hay una emergencia en Chile, llama al 131 (SAMU), 132 (Bomberos) o 133 (Carabineros), si la red telefónica está disponible.</p></article>
-   <article class="card"><div class="eyebrow">TU INFORMACIÓN</div><h3><span id="noteCount">0</span> notas guardadas</h3><p>Guarda datos útiles para tu familia y consúltalos desde Notas.</p><button class="btn secondary" onclick="go('notes')">Abrir mis notas</button></article>
+ <header class="top"><div><div class="eyebrow">KNOWLEDGE THAT STAYS</div><h1 id="pageTitle">Asistente IA</h1></div><div class="topright"><div class="status"><b id="onlineText">● En línea</b></div><div class="avatar">SV</div></div></header>
+ <section id="home" class="section">
+  <div class="section-title"><h2>SURVIVAL</h2><p>Preparación y comunicación para cuando más lo necesitas.</p></div>
+  <div class="home-actions" style="grid-template-columns:repeat(2,minmax(0,1fr));max-width:760px">
+   <button class="home-action" onclick="go('assistant')"><span>✳</span><b>Asistente IA</b><small>Consulta la biblioteca incluso sin Internet</small></button>
+   <button class="home-action" onclick="go('mesh')"><span>⌁</span><b>Chat cercano</b><small>Comunicación directa por Bluetooth en la app instalada</small></button>
   </div>
  </section>
  <section id="library" class="section">
@@ -116,8 +107,8 @@ input,textarea,.search{font-size:16px;min-height:50px}
    <p style="font-size:11px;margin-top:10px;color:var(--muted)">Cartografía © OpenStreetMap contributors · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" style="color:#b8dda9">Atribución y licencia</a></p>
   </div>
  </section>
- <section id="assistant" class="section">
-  <div class="section-title"><h2>Asistente de conocimiento</h2><p>Conecta con un modelo de IA que se ejecuta en tu propio equipo.</p></div>
+ <section id="assistant" class="section active">
+  <div class="section-title"><h2>Asistente offline</h2><p>Consulta las guías guardadas en este dispositivo. Si el servidor de IA está disponible, también podrá generar respuestas más completas.</p></div>
   <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><h3>IA local · Ollama + Qdrant</h3><p id="aiStatus">Buscando servicios locales...</p></div><span class="tag" id="aiTag">RAG LOCAL</span></div><div class="chatbox" id="chatbox"><div class="bubble ai">Soy el asistente local de SURVIVAL. Cuando el servidor esté activo, podré responder usando los documentos que incorpores a tu biblioteca.</div></div><div class="chatrow"><input id="chatInput" placeholder="Pregunta sobre tus documentos..." onkeydown="if(event.key==='Enter')sendChat()"><button class="btn" onclick="sendChat()">Enviar</button></div><div class="notice">Las preguntas se procesan en tu equipo con Ollama. Qdrant almacena vectores de tus documentos para recuperar fragmentos relevantes antes de generar cada respuesta.</div></div>
   <div class="card" style="margin-top:16px"><h3>Agregar conocimiento a la memoria</h3><p>Pega el texto de un manual, protocolo o documento para indexarlo localmente. Luego podrás preguntarle al asistente sobre su contenido.</p><input class="search" id="docTitle" placeholder="Título del documento"><textarea id="docText" placeholder="Pega aquí el contenido del documento..." style="min-height:150px"></textarea><button class="btn" style="margin-top:10px" onclick="indexKnowledge()">Guardar en memoria documental</button><p id="indexStatus" class="muted" style="margin-top:10px;font-size:11px"></p></div>
  </section>
@@ -141,15 +132,7 @@ input,textarea,.search{font-size:16px;min-height:50px}
    </div>
   </div>
  </section>
-\n <section id="tools" class="section">
-  <div class="section-title"><h2>Herramientas</h2><p>Pequeñas utilidades disponibles directamente en este dispositivo.</p></div>
-  <div class="grid">
-   <div class="card half"><h3>Generador de hash SHA-256</h3><p>Calcula una huella digital de texto.</p><textarea id="hashInput" placeholder="Escribe o pega texto aquí..." style="min-height:95px;margin-top:12px"></textarea><button class="btn" style="margin-top:10px" onclick="makeHash()">Calcular SHA-256</button><div class="tool-output" id="hashOutput"></div></div>
-   <div class="card half"><h3>Codificar / decodificar Base64</h3><p>Transforma texto localmente.</p><textarea id="baseInput" placeholder="Texto..." style="min-height:95px;margin-top:12px"></textarea><div style="display:flex;gap:8px;margin-top:10px"><button class="btn" onclick="base64('encode')">Codificar</button><button class="btn secondary" onclick="base64('decode')">Decodificar</button></div><div class="tool-output" id="baseOutput"></div></div>
-   <div class="card half"><h3>Checklist de preparación</h3><p>Marca elementos y quedan guardados en este dispositivo.</p><div class="tile-list" id="checklist"><label class="tile"><input type="checkbox" data-check="agua"> Agua almacenada</label><label class="tile"><input type="checkbox" data-check="botiquin"> Botiquín revisado</label><label class="tile"><input type="checkbox" data-check="linterna"> Linterna y baterías</label><label class="tile"><input type="checkbox" data-check="mapas"> Mapas offline descargados</label></div></div>
-   <div class="card half"><h3>Recursos de emergencia</h3><p>Guarda contactos y protocolos locales antes de necesitarlos.</p><div class="tile-list"><div class="tile"><div class="tile-icon">🚑</div><div><strong>Chile — SAMU</strong><small>131 · Ambulancia</small></div></div><div class="tile"><div class="tile-icon">🚒</div><div><strong>Chile — Bomberos</strong><small>132 · Incendios y rescate</small></div></div><div class="tile"><div class="tile-icon">🚓</div><div><strong>Chile — Carabineros</strong><small>133 · Emergencias policiales</small></div></div></div></div>
-  </div>
- </section>
+\n 
  <section id="notes" class="section">
   <div class="section-title"><h2>Notas personales</h2><p>Notas guardadas en el almacenamiento de este navegador. No se sincronizan con la nube.</p></div>
   <div class="card"><input class="search" id="noteTitle" placeholder="Título de la nota"><textarea id="noteBody" placeholder="Escribe una idea, procedimiento, inventario o información importante..."></textarea><div style="display:flex;gap:8px;margin-top:10px"><button class="btn" onclick="saveNote()">Guardar nota</button><button class="btn secondary" onclick="clearNoteForm()">Limpiar</button></div></div><div id="notesList" class="tile-list"></div>
@@ -179,7 +162,7 @@ function initSurvivalMap(){
 function setChileView(){initSurvivalMap();if(survivalMap)survivalMap.setView([-35.6751,-71.543],4)}
 function setCentralView(){initSurvivalMap();if(survivalMap)survivalMap.setView([-33.45,-70.66],6)}
 
-const titles={mesh:"Chat cercano",home:"SURVIVAL",library:"Biblioteca",maps:"Mapas y orientación",assistant:"Asistente IA",tools:"Herramientas",notes:"Notas personales",system:"Sistema"};
+const titles={mesh:"Chat cercano",home:"SURVIVAL",library:"Biblioteca",maps:"Mapas y orientación",assistant:"Asistente IA",notes:"Notas personales",system:"Sistema"};
 function go(page){document.querySelectorAll(".section").forEach(s=>s.classList.toggle("active",s.id===page));document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));document.getElementById("pageTitle").textContent=titles[page]||"SURVIVAL";window.scrollTo(0,0)}
 document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
 
@@ -229,11 +212,12 @@ function clearNoteForm(){document.getElementById("noteTitle").value="";document.
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 async function makeHash(){let t=document.getElementById("hashInput").value;let h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));document.getElementById("hashOutput").textContent=[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("")}
 function base64(mode){let el=document.getElementById("baseInput"),out=document.getElementById("baseOutput");try{out.textContent=mode==="encode"?btoa(unescape(encodeURIComponent(el.value))):decodeURIComponent(escape(atob(el.value.trim())))}catch(e){out.textContent="No se pudo procesar el texto. Revisa el formato."}}
-async function checkLocal(){let s=document.getElementById("aiStatus"),tag=document.getElementById("aiTag");try{let r=await fetch("/api/health");if(!r.ok)throw 0;let d=await r.json();if(!d.ok)throw 0;s.textContent="Ollama "+(d.ollama?"✓":"—")+" · Qdrant "+(d.qdrant?"✓":"—")+" · Kiwix "+(d.kiwix?"✓":"—")+" · Mapas "+(d.maps?"✓":"—");tag.textContent="SERVIDOR LOCAL";document.getElementById("sysAI").textContent=s.textContent;document.getElementById("kiwixStatus").textContent=d.kiwix?"Kiwix activo · listo para servir archivos ZIM":"Kiwix no disponible";document.getElementById("mapsStatus").textContent=d.maps?"TileServer GL activo · esperando archivos MBTiles":"Servidor de mapas no disponible";if(survivalMap)survivalMap.invalidateSize();return}catch{}s.textContent="No conectado a un servidor local. Abre SURVIVAL desde el PC que ejecuta Docker.";tag.textContent="SIN SERVIDOR";document.getElementById("sysAI").textContent="No conectado";document.getElementById("kiwixStatus").textContent="Disponible al iniciar el servidor Docker local";document.getElementById("mapsStatus").textContent="Disponible al iniciar el servidor Docker local"}
+async function checkLocal(){let s=document.getElementById("aiStatus"),tag=document.getElementById("aiTag");try{let r=await fetch("/api/health");if(!r.ok)throw 0;let d=await r.json();if(!d.ok)throw 0;s.textContent="Ollama "+(d.ollama?"✓":"—")+" · Qdrant "+(d.qdrant?"✓":"—")+" · Kiwix "+(d.kiwix?"✓":"—")+" · Mapas "+(d.maps?"✓":"—");tag.textContent="SERVIDOR LOCAL";document.getElementById("sysAI").textContent=s.textContent;document.getElementById("kiwixStatus").textContent=d.kiwix?"Kiwix activo · listo para servir archivos ZIM":"Kiwix no disponible";document.getElementById("mapsStatus").textContent=d.maps?"TileServer GL activo · esperando archivos MBTiles":"Servidor de mapas no disponible";if(survivalMap)survivalMap.invalidateSize();return}catch{}s.textContent="Asistente offline disponible · respuestas basadas en la biblioteca guardada. IA generativa opcional no conectada.";tag.textContent="MODO OFFLINE";document.getElementById("sysAI").textContent="No conectado";document.getElementById("kiwixStatus").textContent="Disponible al iniciar el servidor Docker local";document.getElementById("mapsStatus").textContent="Disponible al iniciar el servidor Docker local"}
 function openLocalService(port){if(location.port!=="8788"){alert("Abre SURVIVAL desde el servidor local (http://IP-DEL-PC:8788) para acceder a los servicios offline.");return}window.open("http://"+location.hostname+":"+port,"_blank","noopener")}
 async function indexKnowledge(){const title=document.getElementById("docTitle").value.trim()||"Documento personal",textValue=document.getElementById("docText").value.trim(),status=document.getElementById("indexStatus");if(textValue.length<40){status.textContent="Agrega al menos 40 caracteres.";return}status.textContent="Dividiendo e indexando documento en Qdrant...";try{const r=await fetch("/api/knowledge/index",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title,text:textValue})});const d=await r.json();if(!r.ok)throw new Error(d.error||"No se pudo indexar");status.textContent="Documento guardado: "+d.title+" · "+d.chunks+" fragmentos indexados.";document.getElementById("docText").value=""}catch(e){status.textContent="Error: "+e.message}}
-async function sendChat(){let input=document.getElementById("chatInput"),q=input.value.trim();if(!q)return;let box=document.getElementById("chatbox");box.insertAdjacentHTML("beforeend",'<div class="bubble user">'+esc(q)+'</div>');input.value="";let wait=document.createElement("div");wait.className="bubble ai";wait.textContent="Buscando en tus documentos y consultando la IA local...";box.appendChild(wait);box.scrollTop=box.scrollHeight;try{const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:q})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Servidor no disponible");wait.textContent=(d.reply||"Sin respuesta")+(d.sources?.length?"\n\nDocumentos consultados: "+d.sources.map(x=>x.title).filter(Boolean).join(", "):"\n\nNo se encontraron fragmentos relevantes en la memoria documental.")}catch(e){wait.textContent="No se pudo conectar con la IA local. Abre SURVIVAL desde el PC o la red local donde corre Docker. "+e.message}box.scrollTop=box.scrollHeight}
+async function sendChat(){let input=document.getElementById("chatInput"),q=input.value.trim();if(!q)return;let box=document.getElementById("chatbox");box.insertAdjacentHTML("beforeend",'<div class="bubble user">'+esc(q)+'</div>');input.value="";let wait=document.createElement("div");wait.className="bubble ai";wait.textContent="Buscando en tus documentos y consultando la IA local...";box.appendChild(wait);box.scrollTop=box.scrollHeight;try{const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:q})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Servidor no disponible");wait.textContent=(d.reply||"Sin respuesta")+(d.sources?.length?"\n\nDocumentos consultados: "+d.sources.map(x=>x.title).filter(Boolean).join(", "):"\n\nNo se encontraron fragmentos relevantes en la memoria documental.")}catch(e){wait.textContent=offlineAnswer(q)}box.scrollTop=box.scrollHeight}
 
+function offlineAnswer(q){const terms=q.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").split(/[^a-z0-9]+/).filter(x=>x.length>2);const ranked=knowledgeItems.map(g=>{const t=(g.title+" "+g.summary+" "+(g.tags||[]).join(" ")+" "+g.body).toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");return {g,score:terms.reduce((n,w)=>n+(t.includes(w)?(g.title.toLowerCase().includes(w)?5:1):0),0)}}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,3);if(!ranked.length)return "No encontré una guía que responda directamente. Prueba con agua, terremoto, tsunami, fuego, primeros auxilios o refugio.";return ranked.map(({g})=>g.title+"\\n"+g.summary+"\\n\\n"+g.body.split(/\\n\\n+/).slice(0,4).join("\\n\\n")).join("\\n\\n──────────\\n\\n")+"\\n\\nRespuesta basada en la biblioteca offline de SURVIVAL. Verifica las instrucciones de las autoridades."}
 function getMeshMessages(){try{return JSON.parse(localStorage.getItem("survival-mesh-log")||"[]")}catch{return[]}}
 function renderMesh(){const log=document.getElementById("meshLog");if(!log)return;const items=getMeshMessages();log.innerHTML=items.map(m=>'<div class="mesh-msg '+(m.mine?'mine':'')+'"><span class="meta">'+esc(m.from)+' · '+new Date(m.time).toLocaleTimeString()+'</span>'+esc(m.text)+'</div>').join("")||'<div class="mesh-msg"><span class="meta">SYSTEM</span>Canal vacío. Envía un mensaje para guardar una nota local.</div>';log.scrollTop=log.scrollHeight}
 function saveMesh(textValue,alert=false){const items=getMeshMessages();items.push({from:"ESTE DISPOSITIVO"+(alert?" / ALERTA":""),text:textValue,mine:true,time:new Date().toISOString(),alert});localStorage.setItem("survival-mesh-log",JSON.stringify(items.slice(-250)));renderMesh()}
