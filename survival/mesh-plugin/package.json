@@ -4,22 +4,13 @@
   "description": "Native BLE transport for SURVIVAL offline mesh chat",
   "main": "src/index.ts",
   "module": "src/index.ts",
-  "types": "src/definitions.ts",
+  "types": "src/index.ts",
   "capacitor": {
-    "ios": {
-      "src": "ios"
-    },
-    "android": {
-      "src": "android"
-    }
+    "ios": { "src": "ios" },
+    "android": { "src": "android" }
   },
-  "files": [
-    "src",
-    "ios",
-    "android",
-    "SurvivalMesh.podspec"
-  ],
-  "peerDependencies": {
-    "@capacitor/core": "^7.0.0"
+  "files": ["src", "ios", "android", "SurvivalMesh.podspec"],
+  "dependencies": {
+    "@capacitor/core": "^7.4.3"
   }
 }
