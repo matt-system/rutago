@@ -17,7 +17,7 @@ export default {async fetch(request,env){
  if(p==="/app")return Response.redirect(new URL("/app/",request.url),308);
  if(p==="/app/"||p==="/app/index.html")return new Response(pwaAssets["index.html"],{headers:{"content-type":pwaTypes["index.html"],"cache-control":"no-store",...pwaHeaders}});
  if(p.startsWith("/app/")){const key=p.slice(5).startsWith("vendor/")?"vendor_"+p.slice(12):p.slice(5);if(Object.prototype.hasOwnProperty.call(pwaAssets,key))return new Response(pwaAssets[key],{headers:{"content-type":pwaTypes[key]||"application/octet-stream","cache-control":key==="sw.js"||key==="app.js"?"no-cache":"public, max-age=3600",...(key==="sw.js"?{"service-worker-allowed":"/app/"}:{}),...pwaHeaders}})}
- if(p==="/health")return reply({app:"meshbit",portal:"online",api:"online",storage:"cloudflare-d1",e2eeClient:"not-yet-verified",bluetoothMesh:false});
+ if(p==="/health")return reply({app:"meshbit",portal:"online",api:"online",pwa:"experimental-deployed",storage:"cloudflare-d1",e2eeClient:"experimental-not-audited",bluetoothMesh:false});
  if(p==="/manifest.webmanifest")return new Response(manifest,{headers:{"content-type":"application/manifest+json"}});
  if(p==="/sw.js")return new Response(sw,{headers:{"content-type":"application/javascript","service-worker-allowed":"/"}});
  if(p==="/icon.svg")return new Response(icon,{headers:{"content-type":"image/svg+xml"}});
