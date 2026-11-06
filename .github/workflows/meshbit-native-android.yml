@@ -24,7 +24,7 @@ jobs:
       - name: Generate native platform projects
         working-directory: meshbit/native
         run: flutter create --project-name meshbit --org app.meshbit --platforms=android,ios .
-      - name: Configure radio permissions
+      - name: Remove generated example test\n        working-directory: meshbit/native\n        run: rm -f test/widget_test.dart\n      - name: Configure radio permissions
         working-directory: meshbit/native
         run: python3 tool/patch_platform.py
       - name: Resolve packages
