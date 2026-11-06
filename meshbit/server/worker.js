@@ -9,7 +9,7 @@ const sw="const C='meshbit-v3';self.addEventListener('install',e=>e.waitUntil(ca
 const icon='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#080b0a"/><path d="M110 130h292v54H164v70h210v54H164v74h238v54H110z" fill="#a4edb5"/><circle cx="390" cy="130" r="26" fill="#a4edb5"/></svg>';
 export default {async fetch(request,env){
  const u=new URL(request.url), p=u.pathname, cors={"access-control-allow-origin":"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization","access-control-max-age":"86400"};
- if(request.method==="OPTIONS")return new Response(null,{status:204,headers:cors});
+ if(request.method==="OPTIONS")return new Response(null,{status:204,headers:{...cors,"cache-control":"no-store"}});
  const reply=(data,status=200)=>{const r=json(data,status);const h=new Headers(r.headers);for(const [k,v] of Object.entries(cors))h.set(k,v);return new Response(r.body,{status:r.status,headers:h})};
  if(p==="/health")return reply({app:"meshbit",portal:"online",api:"online",storage:"cloudflare-d1",e2eeClient:"not-yet-verified",bluetoothMesh:false});
  if(p==="/manifest.webmanifest")return new Response(manifest,{headers:{"content-type":"application/manifest+json"}});
