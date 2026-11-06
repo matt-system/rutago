@@ -1,0 +1,1 @@
+Coloca aquí tus archivos .zim descargados desde https://library.kiwix.org/ . No se incluyen archivos de contenido en Git debido a su tamaño.
