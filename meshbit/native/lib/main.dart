@@ -374,8 +374,45 @@ class _MeshHomeState extends State<MeshHome> {
   bool busy = false;
   bool pinConfirmed = false;
   bool outgoingPinConfirmed = false;
-  @override void initState() { super.initState(); engine = MeshEngine((s)=>setState(() { status=s; if(s.startsWith('Solicitud de conexión:')) pinConfirmed=false; }),(m)=>setState((){if(!inbox.any((e)=>e.id==m.id)){inbox.insert(0,m); if(inbox.length>100) inbox.removeLast();}}),(p)=>setState(()=>peers=p)); _loadLocalInbox(); }
-  Future<void> _loadLocalInbox() async { try { final packets=await engine.loadInbox(); if(mounted) setState(()=>inbox..clear()..addAll(packets)); } catch(e) { if(mounted) notice('No se pudo abrir la bandeja local: $e'); } }
+  @override void initState() {
+    super.initState();
+    engine = MeshEngine(
+      (value) => setState(() {
+        status = value;
+        if (value.startsWith('Solicitud de conexión:')) pinConfirmed = false;
+      }),
+      (packet) => setState(() {
+        if (!inbox.any((item) => item.id == packet.id)) {
+          inbox.insert(0, packet);
+          if (inbox.length > 100) inbox.removeLast();
+        }
+      }),
+      (value) => setState(() => peers = value),
+    );
+    _bootMesh();
+  }
+
+  Future<void> _bootMesh() async {
+    await _loadLocalInbox();
+    if (!mounted) return;
+    setState(() => busy = true);
+    try {
+      await engine.start();
+    } catch (error) {
+      if (mounted) notice('MESH necesita Bluetooth activado y los permisos correspondientes: $error');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> _loadLocalInbox() async {
+    try {
+      final packets = await engine.loadInbox();
+      if (mounted) setState(() => inbox..clear()..addAll(packets));
+    } catch (error) {
+      if (mounted) notice('No se pudo abrir la bandeja local: $error');
+    }
+  }
   @override void dispose() { destination.dispose(); body.dispose(); key.dispose(); engine.dispose(); super.dispose(); }
   void notice(String s) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s))); }
   @override Widget build(BuildContext context) => Scaffold(
