@@ -209,15 +209,14 @@ class MeshHome extends StatefulWidget {
 class _MeshHomeState extends State<MeshHome> {
   late final MeshEngine engine;
   String status = 'MESH apagado';
-  MeshEnvelope? lastEnvelope;
   final List<MeshEnvelope> inbox = [];
-  String decrypted = '';
+  final Map<String,String> decryptedMessages = {};
   List<Peer> peers = [];
   final destination = TextEditingController();
   final body = TextEditingController();
   final key = TextEditingController();
   bool busy = false;
-  @override void initState() { super.initState(); engine = MeshEngine((s)=>setState(()=>status=s),(m)=>setState((){lastEnvelope=m; if(!inbox.any((e)=>e.id==m.id)){inbox.insert(0,m); if(inbox.length>100) inbox.removeLast();} decrypted='';}),(p)=>setState(()=>peers=p)); }
+  @override void initState() { super.initState(); engine = MeshEngine((s)=>setState(()=>status=s),(m)=>setState((){if(!inbox.any((e)=>e.id==m.id)){inbox.insert(0,m); if(inbox.length>100) inbox.removeLast();}}),(p)=>setState(()=>peers=p)); }
   @override void dispose() { destination.dispose(); body.dispose(); key.dispose(); engine.dispose(); super.dispose(); }
   void notice(String s) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s))); }
   @override Widget build(BuildContext context) => Scaffold(
@@ -239,15 +238,29 @@ class _MeshHomeState extends State<MeshHome> {
       Align(alignment:Alignment.centerLeft,child:TextButton.icon(onPressed:()=>setState(()=>key.text=MeshEngine.generateKey()),icon:const Icon(Icons.key),label:const Text('GENERAR CLAVE SEGURA'))),
       const SizedBox(height:8),TextField(controller:body,minLines:2,maxLines:4,decoration:const InputDecoration(labelText:'Mensaje',border:OutlineInputBorder())),
       const SizedBox(height:12),FilledButton.icon(onPressed:busy?null:()async{setState(()=>busy=true);try{await engine.sendText(destination.text,body.text,key.text);body.clear();notice('Mensaje guardado en la cola mesh.');}catch(e){notice(e.toString());}finally{if(mounted)setState(()=>busy=false);}},icon:const Icon(Icons.send),label:const Text('ENVIAR POR MESH')),
-      if(lastEnvelope != null) Padding(padding:const EdgeInsets.only(top:18),child:Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(0xff202b23),borderRadius:BorderRadius.circular(12)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        const Text('PAQUETE CIFRADO RECIBIDO',style:TextStyle(color:Color(0xffa8c5ac),fontSize:11,letterSpacing:1.5)),
-        Text('ID de paquete: ${lastEnvelope!.id}',style:const TextStyle(fontSize:12)),
-        const SizedBox(height:8),
-        TextField(controller:key,decoration:const InputDecoration(labelText:'Clave de conversación',border:OutlineInputBorder()),obscureText:true),
-        const SizedBox(height:8),
-        FilledButton(onPressed:()async{try{final clear=await engine.decryptMessage(lastEnvelope!,key.text);setState(()=>decrypted=clear);}catch(e){notice('No se pudo descifrar: clave incorrecta o paquete alterado.');}},child:const Text('DESCIFRAR MENSAJE')),
-        if(decrypted.isNotEmpty) Padding(padding:const EdgeInsets.only(top:10),child:Text(decrypted,style:const TextStyle(fontSize:16)))
-      ]))),
+      const SizedBox(height:18),
+      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+        const Text('BANDEJA MESH',style:TextStyle(letterSpacing:2,fontSize:11,color:Color(0xffa8c5ac))),
+        Text('${inbox.length} paquetes',style:const TextStyle(color:Colors.white54,fontSize:12))
+      ]),
+      if(inbox.isEmpty) const Padding(padding:EdgeInsets.symmetric(vertical:14),child:Text('Los mensajes que lleguen por esta red aparecerán aquí. Los nodos intermedios los guardan y reenvían sin leerlos.')),
+      ...inbox.map((packet)=>Card(
+        color:const Color(0xff202b23),
+        child:Padding(
+          padding:const EdgeInsets.all(14),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text('PAQUETE ${packet.id.substring(0,8)} · TTL ${packet.ttl}',style:const TextStyle(color:Color(0xffa8c5ac),fontSize:11,letterSpacing:1)),
+            const SizedBox(height:8),
+            FilledButton.tonal(onPressed:()async{
+              try{
+                final clear=await engine.decryptMessage(packet,key.text);
+                setState(()=>decryptedMessages[packet.id]=clear);
+              }catch(e){notice('No se pudo abrir: clave incorrecta, paquete alterado o destinatario distinto.');}
+            },child:const Text('ABRIR CON CLAVE')),
+            if(decryptedMessages.containsKey(packet.id)) Padding(padding:const EdgeInsets.only(top:10),child:Text(decryptedMessages[packet.id]!,style:const TextStyle(fontSize:16)))
+          ])
+        )
+      )),
       const SizedBox(height:20),const Text('La retransmisión usa paquetes cifrados, TTL de 12 saltos y deduplicación por ID. Los nodos intermedios almacenan y reenvían el paquete sin descifrarlo. Los IDs de emisor y destinatario van dentro del cifrado. Los relays solo ven un ID aleatorio, TTL y ciphertext. Emisor y destinatario deben compartir la clave por un canal seguro.',style:TextStyle(color:Colors.white54,fontSize:12,height:1.5))
     ]),
   );
