@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';\nimport 'dart:io';
+import 'dart:math';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
@@ -9,7 +10,9 @@ import 'package:nearby/nearby.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
-import 'package:uuid/uuid.dart';\nimport 'package:permission_handler/permission_handler.dart';
+import 'package:uuid/uuid.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 void main() => runApp(const MeshbitApp());
 
@@ -52,7 +55,8 @@ class MeshEngine {
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     nodeId = prefs.getString('mesh.node') ?? _uuid.v4();
-    await prefs.setString('mesh.node', nodeId);\n    _nearby = NearbyService(localDisplayName:'MESHBIT', localPeerId:nodeId);
+    await prefs.setString('mesh.node', nodeId);
+    _nearby = NearbyService(localDisplayName:'MESHBIT', localPeerId:nodeId);
     final dbPath = p.join(await getDatabasesPath(), 'meshbit_mesh.db');
     _db = await openDatabase(dbPath, version:1, onCreate:(db,_) async {
       await db.execute('CREATE TABLE packets(id TEXT PRIMARY KEY, json TEXT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)');
@@ -64,6 +68,16 @@ class MeshEngine {
   Future<void> start() async {
     if (running) return;
     await init();
+    if (Platform.isAndroid) {
+      final android = await DeviceInfoPlugin().androidInfo;
+      final requiredPermissions = android.version.sdkInt >= 31
+          ? [Permission.bluetoothScan, Permission.bluetoothAdvertise, Permission.bluetoothConnect]
+          : [Permission.locationWhenInUse];
+      final statuses = await requiredPermissions.request();
+      if (statuses.values.any((status) => status.isPermanentlyDenied || status.isDenied)) {
+        throw Exception('Faltan permisos de Bluetooth o ubicación cercana. Actívalos en Ajustes para iniciar MESH.');
+      }
+    }
     _discoverySub = _nearby.discoveredPeersStream.listen((list) {
       for (final peer in list) { _peers[peer.id] = peer; }
       onPeers(_peers.values.toList());
@@ -157,7 +171,11 @@ class MeshEngine {
     for (final row in rows) {
       try {
         final env = MeshEnvelope.fromJson(jsonDecode(row['json'] as String));
-        if (env.from == nodeId) {\n          await _broadcast(env);\n        } else if (!env.path.contains(nodeId) && env.ttl > 0) {\n          await _broadcast(env.forwarded(nodeId));\n        }
+        if (env.from == nodeId) {
+          await _broadcast(env);
+        } else if (!env.path.contains(nodeId) && env.ttl > 0) {
+          await _broadcast(env.forwarded(nodeId));
+        }
       } catch (_) {}
     }
   }
@@ -187,7 +205,8 @@ class MeshHome extends StatefulWidget {
 class _MeshHomeState extends State<MeshHome> {
   late final MeshEngine engine;
   String status = 'MESH apagado';
-  MeshEnvelope? lastEnvelope;\n  String decrypted = '';
+  MeshEnvelope? lastEnvelope;
+  String decrypted = '';
   List<Peer> peers = [];
   final destination = TextEditingController();
   final body = TextEditingController();
@@ -202,7 +221,8 @@ class _MeshHomeState extends State<MeshHome> {
       Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:const Color(0xff1b241e),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xff35483a))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         const Text('RED LOCAL',style:TextStyle(color:Color(0xffa8c5ac),letterSpacing:2,fontSize:11)),
         const SizedBox(height:8), Text(status,style:const TextStyle(fontSize:15)),
-        const SizedBox(height:12), SelectableText('ID de este dispositivo\n${engine.nodeId.isEmpty?'Se genera al iniciar':engine.nodeId}',style:const TextStyle(color:Colors.white70,fontSize:12)),
+        const SizedBox(height:12), SelectableText('ID de este dispositivo
+${engine.nodeId.isEmpty?'Se genera al iniciar':engine.nodeId}',style:const TextStyle(color:Colors.white70,fontSize:12)),
         const SizedBox(height:16),Row(children:[Expanded(child:FilledButton.icon(onPressed:busy||engine.running?null:()async{setState(()=>busy=true);try{await engine.start();}catch(e){notice('No se pudo iniciar MESH: $e');}finally{if(mounted)setState(()=>busy=false);}},icon:const Icon(Icons.radar),label:const Text('INICIAR MESH'))),const SizedBox(width:8),OutlinedButton(onPressed:engine.running?()=>engine.stop():null,child:const Text('DETENER'))])
       ])),
       if (engine.pendingPeer != null) Card(color:const Color(0xff332d1a),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('VERIFICACIÓN DE VECINO',style:TextStyle(fontWeight:FontWeight.bold)),Text('Código de seguridad: ${engine.pendingPin}'),const SizedBox(height:8),FilledButton(onPressed:()=>engine.acceptPending(),child:const Text('ACEPTAR CONEXIÓN'))]))),
