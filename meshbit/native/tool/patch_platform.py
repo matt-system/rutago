@@ -19,12 +19,14 @@ if manifest.exists():
 """
     if "android.permission.BLUETOOTH_SCAN" not in text:
         text = text.replace("<application", permissions + "\n    <application", 1)
-        manifest.write_text(text)
+    text = text.replace('android:label="meshbit"', 'android:label="MESHBIT"')
+    manifest.write_text(text)
 
 plist = root / "ios/Runner/Info.plist"
 if plist.exists():
     with plist.open("rb") as f:
         data = plistlib.load(f)
+    data["CFBundleDisplayName"] = "MESHBIT"
     data["NSBluetoothAlwaysUsageDescription"] = "MESHBIT usa Bluetooth para descubrir teléfonos cercanos y retransmitir mensajes sin internet."
     data["NSBluetoothPeripheralUsageDescription"] = "MESHBIT usa Bluetooth para permitir que otros teléfonos cercanos se conecten a este dispositivo."
     data["NSLocalNetworkUsageDescription"] = "MESHBIT usa la red local punto a punto para enviar mensajes cifrados sin conexión a internet."
