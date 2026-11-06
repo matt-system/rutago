@@ -103,7 +103,7 @@ class MeshEngine {
     if (running) return;
     await init();
     if (Platform.isAndroid) {
-      final android = await DeviceInfoPlugin().androidInfo;
+      final android = await const DeviceInfoPlugin().androidInfo;
       final requiredPermissions = android.version.sdkInt >= 31
           ? [Permission.bluetoothScan, Permission.bluetoothAdvertise, Permission.bluetoothConnect]
           : [Permission.locationWhenInUse];
@@ -195,7 +195,7 @@ class MeshEngine {
     final decoded = jsonDecode(utf8.decode(clear)) as Map<String,dynamic>;
     if (decoded['to'] != nodeId) throw Exception('Este paquete no está dirigido a este dispositivo.');
     await _db!.update('packets', {'delivered':1}, where:'id=?', whereArgs:[env.id]);
-    return decoded['from'].toString() + ': ' + decoded['text'].toString();
+    return '${decoded['from']}: ${decoded['text']}';
   }
 
   Future<void> _store(MeshEnvelope env) async {
