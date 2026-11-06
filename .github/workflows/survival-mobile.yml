@@ -1,0 +1,77 @@
+name: Build SURVIVAL mobile apps
+on:
+  push:
+    branches: [survival]
+    paths:
+      - 'survival/mobile-app/**'
+      - 'survival/mesh-plugin/**'
+      - '.github/workflows/survival-mobile.yml'
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: survival
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: survival/mobile-app/package.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Install dependencies
+        working-directory: survival/mobile-app
+        run: npm install
+      - name: Build web assets
+        working-directory: survival/mobile-app
+        run: npm run build
+      - name: Generate Android project
+        working-directory: survival/mobile-app
+        run: npx cap add android
+      - name: Sync native plugin
+        working-directory: survival/mobile-app
+        run: npx cap sync android
+      - name: Build debug APK
+        working-directory: survival/mobile-app/android
+        run: ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: survival-android-debug
+          path: survival/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  ios-simulator:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: survival
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: survival/mobile-app
+        run: npm install
+      - name: Build web assets
+        working-directory: survival/mobile-app
+        run: npm run build
+      - name: Generate iOS project
+        working-directory: survival/mobile-app
+        run: npx cap add ios
+      - name: Sync native plugin
+        working-directory: survival/mobile-app
+        run: npx cap sync ios
+      - name: Add Bluetooth privacy descriptions
+        working-directory: survival/mobile-app
+        run: |
+          /usr/libexec/PlistBuddy -c "Add :NSBluetoothAlwaysUsageDescription string 'SURVIVAL usa Bluetooth para enviar mensajes directamente a teléfonos cercanos, sin Internet.'" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSBluetoothPeripheralUsageDescription string 'SURVIVAL permite que otros teléfonos cercanos se conecten para intercambiar mensajes offline.'" ios/App/App/Info.plist
+      - name: Build iOS Simulator app
+        working-directory: survival/mobile-app
+        run: xcodebuild -workspace ios/App/App.xcworkspace -scheme App -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
