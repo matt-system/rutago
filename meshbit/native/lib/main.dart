@@ -134,7 +134,7 @@ class MeshEngine {
       if (payload.type != PayloadType.bytes || payload.bytes == null) return;
       await _receive(payload.bytes!);
     });
-    await _nearby.startAdvertising(options: AdvertisingOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.hybrid,securityMode:SecurityMode.pinVerification));
+    await _nearby.startAdvertising(options: const AdvertisingOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.hybrid,securityMode:SecurityMode.pinVerification));
     await _nearby.startDiscovery(options: const DiscoveryOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.hybrid));
     running = true;
     onStatus('Buscando dispositivos cercanos. No requiere internet ni datos móviles.');
