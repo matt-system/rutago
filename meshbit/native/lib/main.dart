@@ -83,14 +83,18 @@ class MeshEngine {
   String nodeId = '';
   bool running = false;
   bool _initialized = false;
+  Future<void>? _initFuture;
 
-  Future<void> init() async {
-    if (_initialized) return;
+  Future<void> init() {
+    if (_initialized) return Future.value();
+    return _initFuture ??= _initialize();
+  }
+
+  Future<void> _initialize() async {
     final prefs = await SharedPreferences.getInstance();
     nodeId = prefs.getString('mesh.node') ?? _uuid.v4();
     await prefs.setString('mesh.node', nodeId);
     _nearby = NearbyService(localDisplayName:'MESHBIT', localPeerId:_uuid.v4());
-    _initialized = true;
     final dbPath = p.join(await getDatabasesPath(), 'meshbit_mesh.db');
     _db = await openDatabase(dbPath, version:2, onCreate:(db,_) async {
       await db.execute('CREATE TABLE packets(id TEXT PRIMARY KEY, json TEXT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0, originated INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)');
@@ -100,6 +104,7 @@ class MeshEngine {
     await _db!.delete('packets', where:'created < ?', whereArgs:[DateTime.now().subtract(const Duration(days:7)).millisecondsSinceEpoch]);
     final rows = await _db!.query('packets');
     for (final row in rows) { try { _seen.add(row['id'] as String); } catch (_) {} }
+    _initialized = true;
   }
 
   Future<void> start() async {
