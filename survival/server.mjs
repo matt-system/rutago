@@ -1,0 +1,13 @@
+import http from "node:http";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../web");
+const PORT=Number(process.env.PORT||8788),OLLAMA_URL=(process.env.OLLAMA_URL||"http://ollama:11434").replace(/\/$/,""),MODEL=process.env.OLLAMA_MODEL||"llama3.2:3b";
+const mime={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".svg":"image/svg+xml",".webmanifest":"application/manifest+json"};
+const server=http.createServer(async(req,res)=>{res.setHeader("Access-Control-Allow-Origin","*");res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");res.setHeader("Access-Control-Allow-Headers","Content-Type");if(req.method==="OPTIONS"){res.writeHead(204).end();return}
+try{
+ if(req.url==="/api/health"){let ollama=false;try{const r=await fetch(OLLAMA_URL+"/api/tags",{signal:AbortSignal.timeout(1800)});ollama=r.ok}catch{}res.writeHead(200,{"Content-Type":"application/json"}).end(JSON.stringify({ok:true,ollama,model:MODEL}));return}
+ if(req.url==="/api/chat"&&req.method==="POST"){let raw="";for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw||"{}");if(!body.message||typeof body.message!=="string"||body.message.length>12000){res.writeHead(400).end("Mensaje inválido");return}const r=await fetch(OLLAMA_URL+"/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:MODEL,stream:false,messages:[{role:"system",content:"Eres el asistente privado de SURVIVAL. Responde en español, de forma clara y prudente. Distingue información general de instrucciones de emergencia y recomienda servicios profesionales cuando corresponda."},{role:"user",content:body.message}]})});if(!r.ok){res.writeHead(502).end(JSON.stringify({error:"Ollama no disponible"}));return}const d=await r.json();res.writeHead(200,{"Content-Type":"application/json"}).end(JSON.stringify({reply:d.message?.content||"Sin respuesta"}));return}
+ const pathname=decodeURIComponent(new URL(req.url,"http://localhost").pathname);const file=pathname==="/"?"index.html":pathname.replace(/^\//,"");const full=path.resolve(root,file);if(!full.startsWith(root+path.sep)&&full!==root){res.writeHead(403).end("Forbidden");return}const data=await readFile(full);res.writeHead(200,{"Content-Type":mime[path.extname(full)]||"application/octet-stream","Cache-Control":"no-cache"}).end(data);
+}catch(e){res.writeHead(404,{"Content-Type":"text/plain"}).end("No encontrado")}});server.listen(PORT,"0.0.0.0",()=>console.log("SURVIVAL local server on "+PORT));
