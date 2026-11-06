@@ -10,11 +10,13 @@ void main() {
   });
 
   test('mesh envelope preserves relay metadata and ciphertext', () {
-    final envelope = MeshEnvelope(id:'id-1',from:'node-a',to:'node-b',createdAt:1,ttl:12,path:['node-a'],nonce:'n',cipherText:'c',mac:'m');
+    final envelope = MeshEnvelope(id:'id-1',ttl:12,nonce:'n',cipherText:'opaque-ciphertext',mac:'auth-tag');
     final decoded = MeshEnvelope.fromJson(jsonDecode(jsonEncode(envelope.toJson())));
-    final forwarded = decoded.forwarded('node-relay');
-    expect(forwarded.path, ['node-a','node-relay']);
+    final forwarded = decoded.forwarded();
+    expect(forwarded.id, 'id-1');
     expect(forwarded.ttl, 11);
-    expect(forwarded.cipherText, 'c');
+    expect(forwarded.cipherText, 'opaque-ciphertext');
+    expect(forwarded.toJson().containsKey('from'), isFalse);
+    expect(forwarded.toJson().containsKey('to'), isFalse);
   });
 }
