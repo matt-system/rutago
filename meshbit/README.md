@@ -27,3 +27,7 @@ npm install
 npx expo start
 
 BLE y los SDK nativos requieren development builds; Expo Go no es suficiente.
+
+## Native build automation
+
+GitHub Actions workflows are configured for an Android debug APK and an iOS Simulator build. They run on pushes to this feature branch that modify `meshbit/**`, and can also be started manually from the repository Actions tab. Download successful build artifacts from the corresponding workflow run. The iOS Simulator artifact is not installable on a physical iPhone. A signed iOS device build still requires Apple Developer signing credentials. The current app remains a local sandbox: E2EE and BLE transport are not implemented.
