@@ -807,9 +807,14 @@ class _MeshHomeState extends State<MeshHome> {
 
   void _selectTab(int tab) {
     setState(() {
-      selectedTab = tab;
-      if (tab != 1) selectedContactId = null;
-      selectedContactAlias = null;
+      if (tab == selectedTab && tab == 1) {
+        selectedContactId = null;
+        selectedContactAlias = null;
+      } else {
+        selectedTab = tab;
+        if (tab != 1) selectedContactId = null;
+        selectedContactAlias = null;
+      }
     });
     _reloadConversation();
   }
@@ -1073,6 +1078,8 @@ class _MeshHomeState extends State<MeshHome> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
+      automaticallyImplyLeading: false,
+      leading: selectedTab == 1 && selectedContactId != null ? IconButton(tooltip:'Volver a contactos',onPressed:()=>_selectTab(1),icon:const Icon(Icons.arrow_back)) : null,
       backgroundColor: const Color(0xff101611),
       titleSpacing: 16,
       title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
