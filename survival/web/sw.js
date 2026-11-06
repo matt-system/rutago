@@ -1,1 +1,25 @@
-const CACHE="survival-shell-v1";const CORE=["/","/manifest.webmanifest","/icon.svg"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE))));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));self.addEventListener("fetch",e=>{const u=new URL(e.request.url);if(e.request.method!=="GET"||u.origin!==location.origin)return;e.respondWith(caches.match(e.request).then(hit=>hit||fetch(e.request).then(r=>{if(r.ok&&e.request.destination!=="document"){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy))}return r}).catch(()=>caches.match("/"))))});
+const CACHE="survival-shell-v3";
+const CORE=["/","/index.html","/manifest.webmanifest","/icon.svg","/knowledge.json"];
+self.addEventListener("install",event=>{
+ event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()));
+});
+self.addEventListener("activate",event=>{
+ event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
+});
+self.addEventListener("fetch",event=>{
+ const request=event.request;
+ const url=new URL(request.url);
+ if(request.method!=="GET"||url.origin!==self.location.origin)return;
+ event.respondWith((async()=>{
+  const cached=await caches.match(request);
+  if(cached)return cached;
+  try{
+   const response=await fetch(request);
+   if(response.ok){const copy=response.clone();const cache=await caches.open(CACHE);await cache.put(request,copy);}
+   return response;
+  }catch(error){
+   if(request.mode==="navigate")return (await caches.match("/"))||Response.error();
+   return Response.error();
+  }
+ })());
+});
