@@ -119,7 +119,7 @@ export default function Home(){
    <Text style={s.contact}>● Relay Cloudflare <Text style={s.ready}>· SOLO TRANSPORTA CIPHERTEXT</Text></Text>
    <Text style={s.small}>Tu huella: {myFingerprint||"calculando..."}</Text>
    <Text style={s.fieldLabel}>ENVIAR A (USUARIO)</Text>
-   <TextInput value={recipient} onChangeText={setRecipient} autoCapitalize="none" autoCorrect={false} style={s.input} placeholder="nombre del contacto" placeholderTextColor="#718078"/>
+   <TextInput value={recipient} onChangeText={value=>{setRecipient(value);setContactFingerprint("");}} autoCapitalize="none" autoCorrect={false} style={s.input} placeholder="nombre del contacto" placeholderTextColor="#718078"/>
    {!!contactFingerprint&&<Text style={s.small}>Huella del contacto: {contactFingerprint}. Compruébala con esa persona por otro canal antes de confiar en su identidad.</Text>}
   </View>
   <View style={s.chat}><View style={s.chatHead}><Text style={s.panelTitle}># conversación</Text><Text style={s.dim}>E2EE 1:1</Text></View>
