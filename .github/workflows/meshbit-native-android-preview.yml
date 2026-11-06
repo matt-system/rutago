@@ -1,0 +1,58 @@
+name: Build MESHBIT Android Preview APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [ feature/meshbit-app ]
+    paths:
+      - 'meshbit/native/**'
+      - '.github/workflows/meshbit-native-android-preview.yml'
+concurrency:
+  group: meshbit-native-preview-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: write
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Generate native platform project
+        working-directory: meshbit/native
+        run: flutter create --project-name meshbit --org app.meshbit --platforms=android .
+      - name: Remove generated example test
+        working-directory: meshbit/native
+        run: rm -f test/widget_test.dart
+      - name: Configure radio permissions
+        working-directory: meshbit/native
+        run: python3 tool/patch_platform.py
+      - name: Resolve packages
+        working-directory: meshbit/native
+        run: flutter pub get
+      - name: Analyze Dart
+        working-directory: meshbit/native
+        run: flutter analyze --no-fatal-infos
+      - name: Run unit tests
+        working-directory: meshbit/native
+        run: flutter test
+      - name: Build installable preview APK
+        working-directory: meshbit/native
+        run: flutter build apk --debug
+      - name: Publish preview APK
+        working-directory: meshbit/native
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: meshbit-native-preview-${{ github.run_number }}
+        run: |
+          APK="build/app/outputs/flutter-apk/app-debug.apk"
+          gh release create "$TAG" "$APK" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "MESHBIT Android preview ${{ github.run_number }}" \
+            --notes "Installable preview/debug build for testing only. Bluetooth LE mesh is foreground-only, requires Bluetooth permissions and manual shared keys. Store-and-forward and multi-hop need real multi-phone testing. Not security audited; not for high-risk use."
