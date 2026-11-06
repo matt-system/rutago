@@ -97,6 +97,7 @@ class MeshEngine {
   Database? _db;
   String nodeId = '';
   bool running = false;
+  int get connectedPeerCount => _nearby.connectedPeers.length;
   bool _initialized = false;
   Future<void>? _initFuture;
 
