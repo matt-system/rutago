@@ -29,6 +29,7 @@ if plist.exists():
     data["NSBluetoothPeripheralUsageDescription"] = "MESHBIT usa Bluetooth para permitir que otros teléfonos cercanos se conecten a este dispositivo."
     data["NSLocalNetworkUsageDescription"] = "MESHBIT usa la red local punto a punto para enviar mensajes cifrados sin conexión a internet."
     data["NSBonjourServices"] = sorted(set(data.get("NSBonjourServices", []) + ["_meshbit._tcp"]))
+    data["UIBackgroundModes"] = sorted(set(data.get("UIBackgroundModes", []) + ["bluetooth-central", "bluetooth-peripheral"]))
     with plist.open("wb") as f:
         plistlib.dump(data, f)
 print("Platform permissions configured.")
