@@ -382,7 +382,11 @@ class _MeshHomeState extends State<MeshHome> {
       Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:const Color(0xff1b241e),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xff35483a))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         const Text('RED LOCAL',style:TextStyle(color:Color(0xffa8c5ac),letterSpacing:2,fontSize:11)),
         const SizedBox(height:8), Text(status,style:const TextStyle(fontSize:15)),
-        const SizedBox(height:12), SelectableText('ID de este dispositivo\n${engine.nodeId.isEmpty?'Se genera al iniciar':engine.nodeId}',style:const TextStyle(color:Colors.white70,fontSize:12)),
+        const SizedBox(height:12),
+        Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+          Expanded(child:SelectableText('ID de este dispositivo\n${engine.nodeId.isEmpty?'Se genera al iniciar':engine.nodeId}',style:const TextStyle(color:Colors.white70,fontSize:12))),
+          IconButton(tooltip:'Copiar ID',onPressed:engine.nodeId.isEmpty?null:()async{await Clipboard.setData(ClipboardData(text:engine.nodeId));notice('ID copiado. Compártelo con tu contacto.');},icon:const Icon(Icons.copy))
+        ]),
         const SizedBox(height:16),Row(children:[Expanded(child:FilledButton.icon(onPressed:busy||engine.running?null:()async{setState(()=>busy=true);try{await engine.start();}catch(e){notice('No se pudo iniciar MESH: $e');}finally{if(mounted)setState(()=>busy=false);}},icon:const Icon(Icons.radar),label:const Text('INICIAR MESH'))),const SizedBox(width:8),OutlinedButton(onPressed:engine.running?()=>engine.stop():null,child:const Text('DETENER'))])
       ])),
       if (engine.pendingPeer != null) Card(color:const Color(0xff332d1a),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('VERIFICACIÓN DE VECINO',style:TextStyle(fontWeight:FontWeight.bold)),Text('Código de seguridad: ${engine.pendingPin}'),CheckboxListTile(contentPadding:EdgeInsets.zero,value:pinConfirmed,onChanged:(value)=>setState(()=>pinConfirmed=value??false),title:const Text('He comparado el código en ambos teléfonos')),const SizedBox(height:8),FilledButton(onPressed:pinConfirmed?()async{try{await engine.acceptPending(pinConfirmed:pinConfirmed);setState(()=>pinConfirmed=false);}catch(e){notice(e.toString());}}:null,child:const Text('ACEPTAR CONEXIÓN'))]))),
