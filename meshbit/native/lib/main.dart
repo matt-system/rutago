@@ -97,7 +97,7 @@ class MeshEngine {
   Database? _db;
   String nodeId = '';
   bool running = false;
-  int get connectedPeerCount => _nearby.connectedPeers.length;
+  int get connectedPeerCount => _initialized ? _nearby.connectedPeers.length : 0;
   bool _initialized = false;
   Future<void>? _initFuture;
 
@@ -126,7 +126,7 @@ class MeshEngine {
     await _db!.delete('packets', where:'created < ?', whereArgs:[retentionCutoff]);
     await _db!.delete('forwards', where:'sent_at < ?', whereArgs:[retentionCutoff]);
     final rows = await _db!.query('packets');
-    for (final row in rows) { try { _seen.add(row['id'] as String); } catch (_) {} }
+    for (final row in rows) { try { _rememberSeen(row['id'] as String); } catch (_) {} }
     _nearby = NearbyService(localDisplayName:'MESHBIT', localPeerId:_uuid.v4());
     _initialized = true;
   }
@@ -257,7 +257,7 @@ class MeshEngine {
     final inner = jsonEncode({'v':1,'kind':'text','id':packetId,'from':nodeId,'alias':senderAlias.trim().isEmpty?'mesh-user':senderAlias.trim(),'to':destination.trim(),'text':text,'createdAt':DateTime.now().millisecondsSinceEpoch});
     final box = await _aes.encrypt(utf8.encode(inner), secretKey:SecretKey(key));
     final envelope = MeshEnvelope(id:packetId,ttl:7,nonce:base64Encode(box.nonce),cipherText:base64Encode(box.cipherText),mac:base64Encode(box.mac.bytes));
-    _seen.add(envelope.id);
+    _rememberSeen(envelope.id);
     await _store(envelope, originated:true);
     await _broadcast(envelope);
     onStatus('Mensaje cifrado guardado y enviado a la red. Se reenviará si aparece otra ruta.');
@@ -270,7 +270,7 @@ class MeshEngine {
       final env = MeshEnvelope.fromJson(map);
       final existing = await _db!.query('packets', where:'id=?', whereArgs:[env.id], limit:1);
       if (_seen.contains(env.id)) {
-        if (existing.isNotEmpty && (existing.first['delivered'] as int) == 0 && env.ttl > 0) {
+        if (existing.isNotEmpty && env.ttl > 0) {
           final saved = MeshEnvelope.fromJson(jsonDecode(existing.first['json'] as String));
           final improved = env.forwarded();
           if (improved.ttl > saved.ttl) {
@@ -280,7 +280,7 @@ class MeshEngine {
         }
         return;
       }
-      _seen.add(env.id);
+      _rememberSeen(env.id);
       final forwarded = env.ttl > 0 ? env.forwarded() : env;
       await _store(forwarded);
       onMessage(forwarded);
@@ -322,7 +322,7 @@ class MeshEngine {
 
   Future<List<MeshChatMessage>> loadConversation(String conversationId, String keyHex) async {
     await init();
-    final rows = await _db!.query('packets', orderBy:'created ASC', limit:500);
+    final rows = await _db!.query('packets', orderBy:'created ASC', limit:1000);
     final messages = <MeshChatMessage>[];
     for (final row in rows) {
       try {
@@ -402,8 +402,22 @@ class MeshEngine {
     await deleteContactKey(peerId);
   }
 
+  void _rememberSeen(String id) {
+    if (!_seen.add(id)) return;
+    if (_seen.length > 1000) _seen.remove(_seen.first);
+  }
+
   Future<void> _store(MeshEnvelope env, {bool originated = false}) async {
     await _db!.insert('packets', {'id':env.id,'json':jsonEncode(env.toJson()),'originated':originated ? 1 : 0,'created':DateTime.now().millisecondsSinceEpoch}, conflictAlgorithm:ConflictAlgorithm.ignore);
+    final count = Sqflite.firstIntValue(await _db!.rawQuery('SELECT COUNT(*) FROM packets')) ?? 0;
+    if (count > 1000) {
+      final oldest = await _db!.query('packets', columns:['id'], orderBy:'created ASC', limit:1);
+      if (oldest.isNotEmpty) {
+        final oldestId = oldest.first['id'] as String;
+        await _db!.delete('packets', where:'id=?', whereArgs:[oldestId]);
+        await _db!.delete('forwards', where:'packet_id=?', whereArgs:[oldestId]);
+      }
+    }
   }
 
   Future<List<MeshEnvelope>> loadInbox() async {
