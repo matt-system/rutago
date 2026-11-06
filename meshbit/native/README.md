@@ -13,6 +13,7 @@ Aplicación nativa Flutter para conversaciones locales sin Internet. El transpor
 - Retransmisión multi-salto por inundación controlada, TTL máximo de 7 saltos, deduplicación y exclusión del enlace de entrada.
 - Store-and-forward en SQLite: cada paquete queda guardado hasta 7 días y se reintenta al aparecer otro vecino. El registro de reenvío por vecino evita repetir continuamente el mismo paquete.
 - Bandeja local y conversación con dos modos de lectura: burbujas y terminal.
+- Comandos locales `/help`, `/who` y `/id`.
 - Pantalla de nodos cercanos, verificación de sesión y contador de conexiones.
 - La app mantiene la pantalla encendida durante una sesión MESH; aumenta el consumo de batería.
 
@@ -30,6 +31,7 @@ Las claves se deben compartir por un canal de confianza distinto de MESHBIT. El 
 ## Distribución fuera de las tiendas
 
 - Android: GitHub Actions construye un APK de prueba y lo publica en una GitHub Release. Se instala directamente; no se publica en Google Play.
+- El botón **CHAT online** abre la PWA cifrada ya existente. Es un acceso separado que requiere Internet; no participa en el transporte MESH ni es necesario para el chat Bluetooth.
 - iOS: el proyecto compila sin firma en CI. Para instalar un IPA en iPhones se necesita firmarlo con un perfil/certificado válido y distribuirlo directamente; no requiere publicar en App Store.
 - Las pruebas de compilación no sustituyen pruebas físicas BLE entre varios teléfonos. Todavía hay que validar Android↔Android, iPhone↔iPhone y Android↔iPhone en campo.
 
