@@ -1,6 +1,7 @@
 import Foundation
 import Capacitor
 import CoreBluetooth
+import UIKit
 
 @objc(SurvivalMeshPlugin)
 public class SurvivalMeshPlugin: CAPPlugin, CAPBridgedPlugin, CBCentralManagerDelegate, CBPeripheralManagerDelegate, CBPeripheralDelegate {
@@ -49,12 +50,16 @@ public class SurvivalMeshPlugin: CAPPlugin, CAPBridgedPlugin, CBCentralManagerDe
     }
     @objc public func send(_ call: CAPPluginCall) {
         guard let encoded = call.getString("data"), let data = Data(base64Encoded: encoded) else { call.reject("Frame base64 inválido"); return }
+        guard data.count <= 160 else { call.reject("Mensaje demasiado grande para el enlace BLE"); return }
         var sent = 0
         for (id, characteristic) in characteristics {
-            if let target = peers[id], target.state == .connected { target.writeValue(data, for: characteristic, type: .withoutResponse); sent += 1 }
+            if let target = peers[id], target.state == .connected {
+                guard data.count <= target.maximumWriteValueLength(for: .withoutResponse) else { continue }
+                target.writeValue(data, for: characteristic, type: .withoutResponse); sent += 1
+            }
         }
-        if tx != nil && !subscribed.isEmpty {
-            let ok = peripheralManager.updateValue(data, for: tx, onを: nil)
+        if tx != nil && !subscribed.isEmpty && data.count <= peripheralManager.maximumUpdateValueLength {
+            let ok = peripheralManager.updateValue(data, for: tx, onSubscribedCentrals: nil)
             if ok { sent += subscribed.count }
         }
         call.resolve(["sent": sent])
