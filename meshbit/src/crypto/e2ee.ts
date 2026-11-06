@@ -25,6 +25,7 @@ export type EncryptedEnvelope = {
 export type IncomingEnvelope = EncryptedEnvelope & {
   sender: string;
   senderSigningPublicKey: string;
+  senderBoxPublicKey: string;
   createdAt: number;
 };
 
