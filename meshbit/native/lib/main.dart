@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:nearby/nearby.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
@@ -331,7 +332,7 @@ class _MeshHomeState extends State<MeshHome> {
       ...peers.map((peer)=>ListTile(leading:const Icon(Icons.bluetooth_searching),title:Text(peer.displayName),subtitle:Text(peer.id),trailing:TextButton(onPressed:()=>engine.connect(peer),child:const Text('CONECTAR')))),
       const Divider(height:32),const Text('MENSAJE CIFRADO',style:TextStyle(letterSpacing:2,fontSize:11,color:Color(0xffa8c5ac))),
       const SizedBox(height:8),TextField(controller:destination,decoration:const InputDecoration(labelText:'ID del destinatario',hintText:'ID MESHBIT del otro dispositivo',border:OutlineInputBorder())),
-      const SizedBox(height:10),TextField(controller:key,decoration:const InputDecoration(labelText:'Clave de conversación (64 caracteres hex)',border:OutlineInputBorder()),obscureText:true),
+      const SizedBox(height:10),TextField(controller:key,decoration:InputDecoration(labelText:'Clave de conversación (64 caracteres hex)',border:const OutlineInputBorder(),suffixIcon:IconButton(tooltip:'Copiar clave',icon:const Icon(Icons.copy),onPressed:()async{if(key.text.isEmpty){notice('Primero genera o ingresa una clave.');return;}await Clipboard.setData(ClipboardData(text:key.text));notice('Clave copiada. Compártela por un canal seguro, nunca por MESH.');})),obscureText:true),
       Align(alignment:Alignment.centerLeft,child:TextButton.icon(onPressed:()=>setState(()=>key.text=MeshEngine.generateKey()),icon:const Icon(Icons.key),label:const Text('GENERAR CLAVE SEGURA'))),
       const SizedBox(height:8),TextField(controller:body,minLines:2,maxLines:4,decoration:const InputDecoration(labelText:'Mensaje',border:OutlineInputBorder())),
       const SizedBox(height:12),FilledButton.icon(onPressed:busy?null:()async{setState(()=>busy=true);try{await engine.sendText(destination.text,body.text,key.text);body.clear();notice('Mensaje guardado en la cola mesh.');}catch(e){notice(e.toString());}finally{if(mounted)setState(()=>busy=false);}},icon:const Icon(Icons.send),label:const Text('ENVIAR POR MESH')),
