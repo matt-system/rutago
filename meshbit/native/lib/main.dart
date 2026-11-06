@@ -78,6 +78,10 @@ class MeshEngine {
   final _aes = AesGcm.with256bits();
   final _peers = <String, Peer>{};
   final _seen = <String>{};
+  final _trustedPeers = <String>{};
+  String? _outgoingAttemptPeer;
+  String? pendingOutgoingPeer;
+  String? pendingOutgoingPin;
   StreamSubscription? _discoverySub, _requestsSub, _payloadSub, _peerStateSub;
   Database? _db;
   String nodeId = '';
@@ -140,16 +144,32 @@ class MeshEngine {
       _pendingPin = request.authenticationPin;
     });
     _peerStateSub = _nearby.peerStateStream.listen((event) {
-      if (event.sasPin != null) onStatus('Compara este código con el otro teléfono: ${event.sasPin}');
+      if (event.sasPin != null && _outgoingAttemptPeer != null) {
+        pendingOutgoingPeer = event.peer.id;
+        pendingOutgoingPin = event.sasPin;
+        onStatus('Compara el código con el otro teléfono. La retransmisión queda bloqueada hasta confirmarlo.');
+      }
       if (event.state == PeerConnectionState.connected) {
         _peers[event.peer.id] = event.peer;
         onPeers(_peers.values.toList());
-        onStatus('Canal local autenticado con ${event.peer.displayName}.');
-        _flush();
+        if (_trustedPeers.contains(event.peer.id)) {
+          onStatus('Vecino verificado: ${event.peer.displayName}.');
+          _flush();
+        } else {
+          onStatus('Conexión cifrada establecida. Falta confirmar el código de seguridad.');
+        }
+      }
+      if (event.state == PeerConnectionState.disconnected) {
+        _trustedPeers.remove(event.peer.id);
       }
     });
     _payloadSub = _nearby.payloadReceivedStream.listen((payload) async {
       if (payload.type != PayloadType.bytes || payload.bytes == null) return;
+      final sourcePeer = payload.peerId;
+      if (sourcePeer == null || !_trustedPeers.contains(sourcePeer)) {
+        onStatus('Paquete descartado: el vecino todavía no está verificado.');
+        return;
+      }
       await _receive(payload.bytes!);
     });
     await _nearby.startAdvertising(options: const AdvertisingOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.bleOnly,securityMode:SecurityMode.pinVerification));
@@ -166,16 +186,42 @@ class MeshEngine {
     final id = _pendingRequest;
     if (id == null) return;
     await _nearby.acceptConnection(id);
+    _trustedPeers.add(id);
     _pendingRequest = null; _pendingPin = null;
     onStatus('Conexión local aceptada. Canal protegido activo.');
     await _flush();
   }
 
   Future<void> connect(Peer peer) async {
+    _outgoingAttemptPeer = peer.id;
     onStatus('Solicitando conexión segura a ${peer.displayName}…');
-    final ok = await _nearby.requestConnection(peer);
-    if (ok) { _peers[peer.id] = peer; onPeers(_peers.values.toList()); onStatus('Conexión establecida con ${peer.displayName}.'); await _flush(); }
-    else { onStatus('La conexión no se completó.'); }
+    try {
+      final ok = await _nearby.requestConnection(peer);
+      if (ok) {
+        _peers[peer.id] = peer;
+        onPeers(_peers.values.toList());
+        if (pendingOutgoingPin == null) {
+          onStatus('Conexión establecida. Esperando verificación del código de seguridad.');
+        }
+      } else {
+        pendingOutgoingPeer = null;
+        pendingOutgoingPin = null;
+        onStatus('La conexión no se completó.');
+      }
+    } finally {
+      _outgoingAttemptPeer = null;
+    }
+  }
+
+  Future<void> confirmOutgoingPin({required bool pinConfirmed}) async {
+    if (!pinConfirmed) throw Exception('Compara el código en ambos teléfonos antes de confirmar.');
+    final peerId = pendingOutgoingPeer;
+    if (peerId == null || pendingOutgoingPin == null) return;
+    _trustedPeers.add(peerId);
+    pendingOutgoingPeer = null;
+    pendingOutgoingPin = null;
+    onStatus('Vecino verificado. Ya puede retransmitir paquetes MESH.');
+    await _flush();
   }
 
   Future<void> sendText(String destination, String text, String keyHex) async {
@@ -238,8 +284,15 @@ class MeshEngine {
     return rows.map((row) => MeshEnvelope.fromJson(jsonDecode(row['json'] as String) as Map<String,dynamic>)).toList();
   }
   Future<void> _broadcast(MeshEnvelope env) async {
-    if (_nearby.connectedPeers.isEmpty) { onStatus('Sin vecinos conectados: mensaje guardado para retransmitir más tarde.'); return; }
-    await _nearby.sendBytesToAll(Uint8List.fromList(utf8.encode(jsonEncode(env.toJson()))));
+    final neighbors = _nearby.connectedPeers
+        .where((peer) => _trustedPeers.contains(peer.id))
+        .toList();
+    if (neighbors.isEmpty) {
+      onStatus('Sin vecinos verificados: paquete guardado localmente para retransmitir más tarde.');
+      return;
+    }
+    final bytes = Uint8List.fromList(utf8.encode(jsonEncode(env.toJson())));
+    await Future.wait(neighbors.map((peer) => _nearby.sendBytes(peer.id, bytes)));
   }
   Future<void> _flush() async {
     final rows = await _db!.query('packets', where:'delivered=0', orderBy:'created ASC', limit:100);
@@ -318,6 +371,7 @@ class _MeshHomeState extends State<MeshHome> {
   final key = TextEditingController();
   bool busy = false;
   bool pinConfirmed = false;
+  bool outgoingPinConfirmed = false;
   @override void initState() { super.initState(); engine = MeshEngine((s)=>setState(() { status=s; if(s.startsWith('Solicitud de conexión:')) pinConfirmed=false; }),(m)=>setState((){if(!inbox.any((e)=>e.id==m.id)){inbox.insert(0,m); if(inbox.length>100) inbox.removeLast();}}),(p)=>setState(()=>peers=p)); _loadLocalInbox(); }
   Future<void> _loadLocalInbox() async { try { final packets=await engine.loadInbox(); if(mounted) setState(()=>inbox..clear()..addAll(packets)); } catch(e) { if(mounted) notice('No se pudo abrir la bandeja local: $e'); } }
   @override void dispose() { destination.dispose(); body.dispose(); key.dispose(); engine.dispose(); super.dispose(); }
@@ -332,6 +386,12 @@ class _MeshHomeState extends State<MeshHome> {
         const SizedBox(height:16),Row(children:[Expanded(child:FilledButton.icon(onPressed:busy||engine.running?null:()async{setState(()=>busy=true);try{await engine.start();}catch(e){notice('No se pudo iniciar MESH: $e');}finally{if(mounted)setState(()=>busy=false);}},icon:const Icon(Icons.radar),label:const Text('INICIAR MESH'))),const SizedBox(width:8),OutlinedButton(onPressed:engine.running?()=>engine.stop():null,child:const Text('DETENER'))])
       ])),
       if (engine.pendingPeer != null) Card(color:const Color(0xff332d1a),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('VERIFICACIÓN DE VECINO',style:TextStyle(fontWeight:FontWeight.bold)),Text('Código de seguridad: ${engine.pendingPin}'),CheckboxListTile(contentPadding:EdgeInsets.zero,value:pinConfirmed,onChanged:(value)=>setState(()=>pinConfirmed=value??false),title:const Text('He comparado el código en ambos teléfonos')),const SizedBox(height:8),FilledButton(onPressed:pinConfirmed?()async{try{await engine.acceptPending(pinConfirmed:pinConfirmed);setState(()=>pinConfirmed=false);}catch(e){notice(e.toString());}}:null,child:const Text('ACEPTAR CONEXIÓN'))]))),
+      if (engine.pendingOutgoingPin != null) Card(color:const Color(0xff203047),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Text('VERIFICA ESTE VECINO',style:TextStyle(fontWeight:FontWeight.bold)),
+        Text('Código de seguridad: ${engine.pendingOutgoingPin}'),
+        CheckboxListTile(contentPadding:EdgeInsets.zero,value:outgoingPinConfirmed,onChanged:(value)=>setState(()=>outgoingPinConfirmed=value??false),title:const Text('El código coincide con el otro teléfono')),
+        FilledButton(onPressed:outgoingPinConfirmed?()async{try{await engine.confirmOutgoingPin(pinConfirmed:outgoingPinConfirmed);setState(()=>outgoingPinConfirmed=false);}catch(e){notice(e.toString());}}:null,child:const Text('CONFIRMAR VECINO'))
+      ]))),
       const SizedBox(height:18),const Text('DISPOSITIVOS CERCANOS',style:TextStyle(letterSpacing:2,fontSize:11,color:Color(0xffa8c5ac))),
       if(peers.isEmpty) const Padding(padding:EdgeInsets.symmetric(vertical:16),child:Text('Todavía no se detectan vecinos. Ambos teléfonos deben abrir MESHBIT e iniciar la búsqueda.')),
       ...peers.map((peer)=>ListTile(leading:const Icon(Icons.bluetooth_searching),title:Text(peer.displayName),subtitle:Text(peer.id),trailing:TextButton(onPressed:()=>engine.connect(peer),child:const Text('CONECTAR')))),
