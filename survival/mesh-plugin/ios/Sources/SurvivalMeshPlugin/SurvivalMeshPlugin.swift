@@ -50,12 +50,12 @@ public class SurvivalMeshPlugin: CAPPlugin, CAPBridgedPlugin, CBCentralManagerDe
     }
     @objc public func send(_ call: CAPPluginCall) {
         guard let encoded = call.getString("data"), let data = Data(base64Encoded: encoded) else { call.reject("Frame base64 inválido"); return }
-        guard data.count <= 160 else { call.reject("Mensaje demasiado grande para el enlace BLE"); return }
+        guard data.count <= 20 else { call.reject("El paquete BLE supera 20 bytes"); return }
         var sent = 0
         for (id, characteristic) in characteristics {
             if let target = peers[id], target.state == .connected {
-                guard data.count <= target.maximumWriteValueLength(for: .withResponse) else { continue }
-                target.writeValue(data, for: characteristic, type: .withResponse); sent += 1
+                guard data.count <= target.maximumWriteValueLength(for: .withoutResponse) else { continue }
+                target.writeValue(data, for: characteristic, type: .withoutResponse); sent += 1
             }
         }
         if tx != nil && !subscribed.isEmpty {
