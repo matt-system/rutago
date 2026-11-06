@@ -28,25 +28,51 @@ function render() {
 function escapeHtml(s: string) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!)); }
 function setState(s: string, detail = '') { $('#status').textContent = s; $('#detail').textContent = detail; }
 
+const fragments = new Map<string, { parts: string[]; total: number; from: string; }>();
 async function sendFrame(frame: ChatMessage & { ttl: number }) {
-  // Compact wire format keeps a short text message within a negotiated BLE ATT packet.
   const wire: WireMessage = { i: frame.id, f: frame.from, b: frame.body, t: frame.at.toString(36), h: frame.hops, l: frame.ttl };
   const bytes = encoder.encode(JSON.stringify(wire));
   if (bytes.length > 160) { setState('MENSAJE MUY LARGO', 'Reduce el texto para transmitirlo por Bluetooth.'); return 0; }
-  const data = btoa(String.fromCharCode(...bytes));
-  try { return (await SurvivalMesh.send({ data })).sent; } catch (e) { setState('ERROR DE ENVÍO', String(e)); return 0; }
-}
-async function receiveFrame(encoded: string) {
+  const packetId = Math.floor(Math.random() * 65536);
+  const chunkSize = 14, total = Math.ceil(bytes.length / chunkSize);
+  let sent = 0;
   try {
-    const raw = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+    for (let index = 0; index < total; index++) {
+      const chunk = bytes.slice(index * chunkSize, Math.min(bytes.length, (index + 1) * chunkSize));
+      const packet = new Uint8Array(6 + chunk.length);
+      packet[0] = 0x53; packet[1] = 0x56; packet[2] = packetId >> 8; packet[3] = packetId & 255; packet[4] = index; packet[5] = total;
+      packet.set(chunk, 6);
+      const data = btoa(String.fromCharCode(...packet));
+      const result = await SurvivalMesh.send({ data });
+      if (index === 0) sent = result.sent;
+      if (result.sent === 0) { setState('ENVÍO INTERRUMPIDO', 'Se perdió el enlace durante la transmisión. Acércate al otro teléfono e inténtalo de nuevo.'); return 0; }
+      if (index < total - 1) await new Promise(resolve => setTimeout(resolve, 65));
+    }
+    return sent;
+  } catch (e) { setState('ERROR DE ENVÍO', String(e)); return 0; }
+}
+async function receiveFrame(encoded: string, peerId = 'peer') {
+  try {
+    const packet = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+    if (packet.length < 7 || packet[0] !== 0x53 || packet[1] !== 0x56) return;
+    const packetId = (packet[2] << 8) | packet[3], index = packet[4], total = packet[5];
+    if (!total || total > 16 || index >= total) return;
+    const key = peerId + ':' + packetId;
+    let entry = fragments.get(key);
+    if (!entry) { entry = { parts: new Array(total), total, from: peerId }; fragments.set(key, entry); }
+    if (entry.total !== total || entry.parts[index]) return;
+    entry.parts[index] = btoa(String.fromCharCode(...packet.slice(6)));
+    if (entry.parts.filter(Boolean).length !== total) return;
+    fragments.delete(key);
+    const joined = entry.parts.map(part => Uint8Array.from(atob(part), ch => ch.charCodeAt(0)));
+    const length = joined.reduce((n, part) => n + part.length, 0), raw = new Uint8Array(length);
+    let offset = 0; for (const part of joined) { raw.set(part, offset); offset += part.length; }
     const w = JSON.parse(decoder.decode(raw)) as WireMessage;
     const frame: ChatMessage & { ttl: number } = { id: w.i, from: w.f, body: w.b, at: parseInt(w.t,36), hops: w.h, ttl: w.l };
     if (!frame.id || !frame.body || seen.has(frame.id) || frame.ttl <= 0) return;
     seen.add(frame.id); messages.push(frame); persist(); render();
-    if (frame.from !== deviceId && frame.hops < 8 && running) {
-      await sendFrame({ ...frame, hops: frame.hops + 1, ttl: frame.ttl - 1 });
-    }
-  } catch { /* Ignore invalid BLE frames. */ }
+    if (frame.from !== deviceId && frame.hops < 8 && running) await sendFrame({ ...frame, hops: frame.hops + 1, ttl: frame.ttl - 1 });
+  } catch { /* Ignore incomplete or invalid BLE frames. */ }
 }
 async function start() {
   if (running) return;
@@ -71,7 +97,7 @@ async function sendMessage() {
   const sent = await sendFrame(frame);
   setState(running ? 'RADIO ACTIVA' : 'SOLO EN ESTE TELÉFONO', sent ? `Enviado por Bluetooth a ${sent} conexión(es).` : 'No hay otro teléfono conectado. El mensaje quedó guardado localmente.');
 }
-SurvivalMesh.addListener('frame', event => { void receiveFrame(event.data); });
+SurvivalMesh.addListener('frame', event => { void receiveFrame(event.data, event.peerId || 'peer'); });
 SurvivalMesh.addListener('peer', peer => {
   $('#peers').textContent = peer.connected ? 'Conectado: ' + peer.name : 'Detectado: ' + peer.name;
 });
