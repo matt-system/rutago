@@ -50,7 +50,7 @@ class MeshEnvelope {
     if (id is! String || !RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id)) {
       throw const FormatException('Invalid packet ID');
     }
-    if (ttl is! int || ttl < 0 || ttl > 12) {
+    if (ttl is! int || ttl < 0 || ttl > 7) {
       throw const FormatException('Invalid packet hop limit');
     }
     if (nonce is! String || base64Decode(nonce).length != 12) {
@@ -172,6 +172,9 @@ class MeshEngine {
       }
       if (event.state == PeerConnectionState.disconnected) {
         _trustedPeers.remove(event.peer.id);
+        _peers.remove(event.peer.id);
+        if (pendingOutgoingPeer == event.peer.id) { pendingOutgoingPeer=null; pendingOutgoingPin=null; _outgoingAttemptPeer=null; }
+        onPeers(_peers.values.toList());
       }
     });
     _payloadSub = _nearby.payloadReceivedStream.listen((payload) async {
@@ -181,7 +184,7 @@ class MeshEngine {
         onStatus('Paquete descartado: el vecino todavía no está verificado.');
         return;
       }
-      await _receive(payload.bytes!);
+      await _receive(payload.bytes!, sourcePeer);
     });
     await _nearby.startAdvertising(options: const AdvertisingOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.bleOnly,securityMode:SecurityMode.pinVerification));
     await _nearby.startDiscovery(options: const DiscoveryOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.bleOnly));
@@ -218,10 +221,12 @@ class MeshEngine {
       } else {
         pendingOutgoingPeer = null;
         pendingOutgoingPin = null;
+        _outgoingAttemptPeer = null;
         onStatus('La conexión no se completó.');
       }
-    } finally {
+    } catch (error) {
       _outgoingAttemptPeer = null;
+      rethrow;
     }
   }
 
@@ -232,6 +237,7 @@ class MeshEngine {
     _trustedPeers.add(peerId);
     pendingOutgoingPeer = null;
     pendingOutgoingPin = null;
+    _outgoingAttemptPeer = null;
     onStatus('Vecino verificado. Ya puede retransmitir paquetes MESH.');
     await _flush();
   }
@@ -245,14 +251,14 @@ class MeshEngine {
     final packetId = _uuid.v4();
     final inner = jsonEncode({'v':1,'kind':'text','id':packetId,'from':nodeId,'alias':senderAlias.trim().isEmpty?'mesh-user':senderAlias.trim(),'to':destination.trim(),'text':text,'createdAt':DateTime.now().millisecondsSinceEpoch});
     final box = await _aes.encrypt(utf8.encode(inner), secretKey:SecretKey(key));
-    final envelope = MeshEnvelope(id:packetId,ttl:12,nonce:base64Encode(box.nonce),cipherText:base64Encode(box.cipherText),mac:base64Encode(box.mac.bytes));
+    final envelope = MeshEnvelope(id:packetId,ttl:7,nonce:base64Encode(box.nonce),cipherText:base64Encode(box.cipherText),mac:base64Encode(box.mac.bytes));
     _seen.add(envelope.id);
     await _store(envelope, originated:true);
     await _broadcast(envelope);
     onStatus('Mensaje cifrado guardado y enviado a la red. Se reenviará si aparece otra ruta.');
   }
 
-  Future<void> _receive(Uint8List bytes) async {
+  Future<void> _receive(Uint8List bytes, String sourcePeer) async {
     try {
       if (bytes.length > 6200) return;
       final map = jsonDecode(utf8.decode(bytes)) as Map<String,dynamic>;
@@ -264,7 +270,7 @@ class MeshEngine {
           final improved = env.forwarded();
           if (improved.ttl > saved.ttl) {
             await _db!.update('packets', {'json':jsonEncode(improved.toJson()),'created':DateTime.now().millisecondsSinceEpoch}, where:'id=?', whereArgs:[env.id]);
-            await _broadcast(improved);
+            await _broadcast(improved, excludePeer:sourcePeer);
           }
         }
         return;
@@ -273,7 +279,7 @@ class MeshEngine {
       final forwarded = env.ttl > 0 ? env.forwarded() : env;
       await _store(forwarded);
       onMessage(forwarded);
-      if (env.ttl > 0) await _broadcast(forwarded);
+      if (env.ttl > 0) await _broadcast(forwarded, excludePeer:sourcePeer);
     } catch (_) { onStatus('Se descartó un paquete local inválido.'); }
   }
 
@@ -357,6 +363,40 @@ class MeshEngine {
     return prefs.getString('mesh.alias') ?? 'mesh-user';
   }
 
+  Future<List<Map<String,String>>> loadContacts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList('mesh.contacts') ?? const <String>[];
+    final contacts = <Map<String,String>>[];
+    for (final value in raw) {
+      try {
+        final item = jsonDecode(value) as Map<String,dynamic>;
+        final id = item['id']?.toString() ?? '';
+        final alias = item['alias']?.toString() ?? '';
+        if (id.isNotEmpty && alias.isNotEmpty) contacts.add({'id':id,'alias':alias});
+      } catch (_) {}
+    }
+    return contacts;
+  }
+
+  Future<void> saveContact(String peerId, String alias) async {
+    final id = peerId.trim();
+    final name = alias.trim();
+    if (id.isEmpty || name.isEmpty || id == nodeId) throw Exception('Revisa el alias y el ID del contacto.');
+    final contacts = await loadContacts();
+    contacts.removeWhere((contact)=>contact['id']==id);
+    contacts.add({'id':id,'alias':name.substring(0,min(name.length,24))});
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('mesh.contacts', contacts.map(jsonEncode).toList());
+  }
+
+  Future<void> removeContact(String peerId) async {
+    final contacts = await loadContacts();
+    contacts.removeWhere((contact)=>contact['id']==peerId);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('mesh.contacts', contacts.map(jsonEncode).toList());
+    await deleteContactKey(peerId);
+  }
+
   Future<void> _store(MeshEnvelope env, {bool originated = false}) async {
     await _db!.insert('packets', {'id':env.id,'json':jsonEncode(env.toJson()),'originated':originated ? 1 : 0,'created':DateTime.now().millisecondsSinceEpoch}, conflictAlgorithm:ConflictAlgorithm.ignore);
   }
@@ -366,9 +406,9 @@ class MeshEngine {
     final rows = await _db!.query('packets', where:'originated=0', orderBy:'created DESC', limit:100);
     return rows.map((row) => MeshEnvelope.fromJson(jsonDecode(row['json'] as String) as Map<String,dynamic>)).toList();
   }
-  Future<void> _broadcast(MeshEnvelope env) async {
+  Future<void> _broadcast(MeshEnvelope env, {String? excludePeer}) async {
     final neighbors = _nearby.connectedPeers
-        .where((peer) => _trustedPeers.contains(peer.id))
+        .where((peer) => peer.id != excludePeer && _trustedPeers.contains(peer.id))
         .toList();
     if (neighbors.isEmpty) {
       onStatus('Sin vecinos verificados: paquete guardado localmente para retransmitir más tarde.');
