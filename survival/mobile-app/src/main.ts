@@ -1,113 +1,35 @@
 import { SurvivalMesh } from '@survival/mesh';
 import './style.css';
-
-type ChatMessage = { id: string; from: string; body: string; at: number; hops: number; };
-type WireMessage = { i: string; f: string; b: string; t: string; h: number; l: number; };
-const $ = (selector: string) => document.querySelector<HTMLElement>(selector)!;
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
-const storeKey = 'survival-mesh-messages-v2';
-const seenKey = 'survival-mesh-seen-v2';
-let messages: ChatMessage[] = JSON.parse(localStorage.getItem(storeKey) || '[]');
-let seen = new Set<string>(JSON.parse(localStorage.getItem(seenKey) || '[]'));
-let running = false;
-let deviceId = localStorage.getItem('survival-mesh-device') || crypto.randomUUID().replaceAll('-', '').slice(0, 8);
-localStorage.setItem('survival-mesh-device', deviceId);
-
-function persist() {
-  messages = messages.slice(-500);
-  localStorage.setItem(storeKey, JSON.stringify(messages));
-  localStorage.setItem(seenKey, JSON.stringify([...seen].slice(-2000)));
-}
-function render() {
-  const list = $('#messages');
-  list.innerHTML = messages.map(m => `<article class="msg ${m.from === deviceId ? 'mine' : ''}"><small>${m.from === deviceId ? 'TÚ' : 'DISPOSITIVO '+escapeHtml(m.from.slice(0,8))} · ${new Date(m.at).toLocaleTimeString()}</small><p>${escapeHtml(m.body)}</p><small>saltos: ${m.hops}</small></article>`).join('');
-  list.scrollTop = list.scrollHeight;
-  $('#count').textContent = String(messages.length);
-}
-function escapeHtml(s: string) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!)); }
-function setState(s: string, detail = '') { $('#status').textContent = s; $('#detail').textContent = detail; }
-
-const fragments = new Map<string, { parts: string[]; total: number; from: string; }>();
-async function sendFrame(frame: ChatMessage & { ttl: number }) {
-  const wire: WireMessage = { i: frame.id, f: frame.from, b: frame.body, t: frame.at.toString(36), h: frame.hops, l: frame.ttl };
-  const bytes = encoder.encode(JSON.stringify(wire));
-  if (bytes.length > 160) { setState('MENSAJE MUY LARGO', 'Reduce el texto para transmitirlo por Bluetooth.'); return 0; }
-  const packetId = Math.floor(Math.random() * 65536);
-  const chunkSize = 14, total = Math.ceil(bytes.length / chunkSize);
-  let sent = 0;
-  try {
-    for (let index = 0; index < total; index++) {
-      const chunk = bytes.slice(index * chunkSize, Math.min(bytes.length, (index + 1) * chunkSize));
-      const packet = new Uint8Array(6 + chunk.length);
-      packet[0] = 0x53; packet[1] = 0x56; packet[2] = packetId >> 8; packet[3] = packetId & 255; packet[4] = index; packet[5] = total;
-      packet.set(chunk, 6);
-      const data = btoa(String.fromCharCode(...packet));
-      const result = await SurvivalMesh.send({ data });
-      if (index === 0) sent = result.sent;
-      if (result.sent === 0) { setState('ENVÍO INTERRUMPIDO', 'Se perdió el enlace durante la transmisión. Acércate al otro teléfono e inténtalo de nuevo.'); return 0; }
-      if (index < total - 1) await new Promise(resolve => setTimeout(resolve, 65));
-    }
-    return sent;
-  } catch (e) { setState('ERROR DE ENVÍO', String(e)); return 0; }
-}
-async function receiveFrame(encoded: string, peerId = 'peer') {
-  try {
-    const packet = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
-    if (packet.length < 7 || packet[0] !== 0x53 || packet[1] !== 0x56) return;
-    const packetId = (packet[2] << 8) | packet[3], index = packet[4], total = packet[5];
-    if (!total || total > 16 || index >= total) return;
-    const key = peerId + ':' + packetId;
-    let entry = fragments.get(key);
-    if (!entry) { entry = { parts: new Array(total), total, from: peerId }; fragments.set(key, entry); }
-    if (entry.total !== total || entry.parts[index]) return;
-    entry.parts[index] = btoa(String.fromCharCode(...packet.slice(6)));
-    if (entry.parts.filter(Boolean).length !== total) return;
-    fragments.delete(key);
-    const joined = entry.parts.map(part => Uint8Array.from(atob(part), ch => ch.charCodeAt(0)));
-    const length = joined.reduce((n, part) => n + part.length, 0), raw = new Uint8Array(length);
-    let offset = 0; for (const part of joined) { raw.set(part, offset); offset += part.length; }
-    const w = JSON.parse(decoder.decode(raw)) as WireMessage;
-    const frame: ChatMessage & { ttl: number } = { id: w.i, from: w.f, body: w.b, at: parseInt(w.t,36), hops: w.h, ttl: w.l };
-    if (!frame.id || !frame.body || seen.has(frame.id) || frame.ttl <= 0) return;
-    seen.add(frame.id); messages.push(frame); persist(); render();
-    if (frame.from !== deviceId && frame.hops < 8 && running) await sendFrame({ ...frame, hops: frame.hops + 1, ttl: frame.ttl - 1 });
-  } catch { /* Ignore incomplete or invalid BLE frames. */ }
-}
-async function start() {
-  if (running) return;
-  setState('CONECTANDO', 'Acepta el permiso Bluetooth si el teléfono lo solicita.');
-  try {
-    await SurvivalMesh.start({ deviceName: 'SURVIVAL' });
-    running = true;
-    setState('RADIO ACTIVA', 'Buscando teléfonos SURVIVAL cercanos. Mantén esta pantalla abierta.');
-  } catch (e) { setState('SIN RADIO', String(e)); }
-}
-async function stop() {
-  await SurvivalMesh.stop(); running = false;
-  setState('RADIO DETENIDA', 'Tus mensajes guardados siguen en este teléfono.');
-}
-async function sendMessage() {
-  const input = $('#compose') as HTMLInputElement;
-  const body = input.value.trim();
-  if (!body) return;
-  if (body.length > 80) { setState('MENSAJE MUY LARGO', 'Máximo 80 caracteres por mensaje en esta versión de radio.'); return; }
-  const frame = { id: crypto.randomUUID().replaceAll('-', '').slice(0,12), from: deviceId, body, at: Date.now(), hops: 0, ttl: 8 };
-  seen.add(frame.id); messages.push(frame); persist(); render(); input.value = '';
-  const sent = await sendFrame(frame);
-  setState(running ? 'RADIO ACTIVA' : 'SOLO EN ESTE TELÉFONO', sent ? `Enviado por Bluetooth a ${sent} conexión(es).` : 'No hay otro teléfono conectado. El mensaje quedó guardado localmente.');
-}
-SurvivalMesh.addListener('frame', event => { void receiveFrame(event.data, event.peerId || 'peer'); });
-SurvivalMesh.addListener('peer', peer => {
-  $('#peers').textContent = peer.connected ? 'Conectado: ' + peer.name : 'Detectado: ' + peer.name;
-});
-SurvivalMesh.addListener('state', state => {
-  if (state.state === 'error' || state.state === 'unavailable') setState('REVISAR BLUETOOTH', state.detail || state.state);
-});
-$('#start').addEventListener('click', () => { void start(); });
-$('#stop').addEventListener('click', () => { void stop(); });
-$('#send').addEventListener('click', () => { void sendMessage(); });
-$('#compose').addEventListener('keydown', e => { if ((e as KeyboardEvent).key === 'Enter') void sendMessage(); });
-$('#clear').addEventListener('click', () => { messages = []; seen.clear(); persist(); render(); });
-$('#device').textContent = deviceId;
-render();
+type Guide={id:string;category:string;title:string;summary:string;tags?:string[];body:string};
+type Msg={id:string;from:string;body:string;at:number;hops:number};
+type Wire={i:string;f:string;b:string;t:string;h:number;l:number};
+const $=<T extends HTMLElement=HTMLElement>(s:string)=>document.querySelector<T>(s)!;
+const read=<T>(k:string,d:T):T=>{try{return JSON.parse(localStorage.getItem(k)||'')}catch{return d}};
+const enc=new TextEncoder(),dec=new TextDecoder(),device=localStorage.getItem('survival-mesh-device')||crypto.randomUUID().replaceAll('-','').slice(0,8);
+localStorage.setItem('survival-mesh-device',device);
+let guides:Guide[]=[],history:{q:string,a:string}[]=read('survival-assistant-history-v1',[]),messages:Msg[]=read('survival-mesh-messages-v2',[]),seen=new Set<string>(read('survival-mesh-seen-v2',[])),running=false;
+const fragments=new Map<string,{parts:string[];total:number}>();
+function esc(s:string){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))}
+function status(a:string,b=''){$('#status').textContent=a;$('#detail').textContent=b}
+function tab(which:'assistant'|'mesh'){document.querySelectorAll<HTMLElement>('[data-tab]').forEach(x=>x.classList.toggle('active',(x as HTMLElement).dataset.tab===which));$('#assistant').hidden=which!=='assistant';$('#mesh').hidden=which!=='mesh';$('#pageTitle').textContent=which==='assistant'?'Asistente IA':'Chat cercano';if(which==='mesh')renderChat()}
+function answer(q:string){if(!guides.length)return 'La biblioteca offline se está cargando. Inténtalo nuevamente.';const terms=q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split(/[^a-z0-9]+/).filter(x=>x.length>2);const ranked=guides.map(g=>{const t=(g.title+' '+g.summary+' '+(g.tags||[]).join(' ')+' '+g.body).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');return {g,score:terms.reduce((n,w)=>n+(t.includes(w)?(g.title.toLowerCase().includes(w)?5:1):0),0)}}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,3);if(!ranked.length)return 'No encontré una coincidencia clara en las guías guardadas. Prueba con: agua, terremoto, tsunami, fuego, primeros auxilios, refugio o comunicaciones.';return ranked.map(({g})=>{const paras=g.body.split(/\n\n+/).filter(Boolean).map(p=>({p,s:terms.reduce((n,w)=>n+(p.toLowerCase().includes(w)?1:0),0)})).sort((a,b)=>b.s-a.s).slice(0,3).map(x=>x.p);return g.title+'\n'+g.summary+'\n\n'+paras.join('\n\n')}).join('\n\n──────────\n\n')+'\n\nFuente: biblioteca de SURVIVAL guardada en este teléfono. Verifica siempre las instrucciones de las autoridades.'}
+function renderAssistant(){const box=$('#assistantMessages');box.innerHTML=history.map(m=>'<article class="answer"><small>TÚ</small><p>'+esc(m.q)+'</p><small>SURVIVAL · RESPUESTA OFFLINE</small><p>'+esc(m.a)+'</p></article>').join('')||'<article class="answer welcome"><small>SURVIVAL · ASISTENTE OFFLINE</small><h2>¿Qué necesitas resolver?</h2><p>Pregunta sobre emergencias, agua, refugio, primeros auxilios y las guías guardadas. Funciona sin Internet.</p></article>';box.scrollTop=box.scrollHeight}
+function ask(){const input=$<HTMLInputElement>('#question'),q=input.value.trim();if(!q)return;history.push({q,a:answer(q)});history=history.slice(-50);localStorage.setItem('survival-assistant-history-v1',JSON.stringify(history));input.value='';renderAssistant()}
+function persist(){messages=messages.slice(-500);localStorage.setItem('survival-mesh-messages-v2',JSON.stringify(messages));localStorage.setItem('survival-mesh-seen-v2',JSON.stringify([...seen].slice(-2000)))}
+function renderChat(){const list=$('#messages');list.innerHTML=messages.map(m=>'<article class="msg '+(m.from===device?'mine':'')+'"><small>'+(m.from===device?'TÚ':'DISPOSITIVO '+esc(m.from.slice(0,8)))+' · '+new Date(m.at).toLocaleTimeString()+'</small><p>'+esc(m.body)+'</p><small>saltos: '+m.hops+'</small></article>').join('')||'<div class="empty">Sin mensajes todavía. Activa Bluetooth para buscar otros teléfonos SURVIVAL.</div>';list.scrollTop=list.scrollHeight;$('#count').textContent=String(messages.length)}
+async function sendFrame(m:Msg&{ttl:number}){const w:Wire={i:m.id,f:m.from,b:m.body,t:m.at.toString(36),h:m.hops,l:m.ttl},bytes=enc.encode(JSON.stringify(w));if(bytes.length>160){status('MENSAJE MUY LARGO','Acorta el mensaje para transmitirlo.');return 0}const id=Math.floor(Math.random()*65536),size=14,total=Math.ceil(bytes.length/size);let sent=0;try{for(let i=0;i<total;i++){const chunk=bytes.slice(i*size,Math.min(bytes.length,(i+1)*size)),p=new Uint8Array(6+chunk.length);p[0]=0x53;p[1]=0x56;p[2]=id>>8;p[3]=id&255;p[4]=i;p[5]=total;p.set(chunk,6);const r=await SurvivalMesh.send({data:btoa(String.fromCharCode(...p))});if(i===0)sent=r.sent;if(!r.sent){status('ENVÍO INTERRUMPIDO','No se pudo enviar el paquete BLE. Acerca los teléfonos e inténtalo otra vez.');return 0}if(i<total-1)await new Promise(ok=>setTimeout(ok,100))}return sent}catch(e){status('ERROR BLE',String(e));return 0}}
+async function receive(encoded:string,peer='peer'){try{const p=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));if(p.length<7||p[0]!==0x53||p[1]!==0x56)return;const id=(p[2]<<8)|p[3],i=p[4],total=p[5];if(!total||total>16||i>=total)return;const key=peer+':'+id;let f=fragments.get(key);if(!f){f={parts:new Array(total),total};fragments.set(key,f)}if(f.total!==total||f.parts[i])return;f.parts[i]=btoa(String.fromCharCode(...p.slice(6)));if(f.parts.filter(Boolean).length!==total)return;fragments.delete(key);const parts=f.parts.map(x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0))),raw=new Uint8Array(parts.reduce((n,x)=>n+x.length,0));let off=0;for(const x of parts){raw.set(x,off);off+=x.length}const w=JSON.parse(dec.decode(raw)) as Wire,m:Msg&{ttl:number}={id:w.i,from:w.f,body:w.b,at:parseInt(w.t,36),hops:w.h,ttl:w.l};if(!m.id||!m.body||seen.has(m.id)||m.ttl<=0)return;seen.add(m.id);messages.push(m);persist();renderChat();if(m.from!==device&&m.hops<8&&running)await sendFrame({...m,hops:m.hops+1,ttl:m.ttl-1})}catch{/* fragmento incompleto */}}
+async function start(){if(running)return;status('ACTIVANDO BLUETOOTH','Acepta los permisos y mantén SURVIVAL abierta.');try{const r=await SurvivalMesh.start({deviceName:'SURVIVAL'});running=true;status('RADIO ACTIVA','Buscando teléfonos cercanos. Escaneo '+(r.scanning?'activo':'iniciando')+'; anuncio '+(r.advertising?'activo':'iniciando')+'.');$('#radioButton').textContent='DETENER RADIO';$('#radioButton').classList.add('danger')}catch(e){status('BLUETOOTH NO DISPONIBLE',String(e))}}
+async function stop(){try{await SurvivalMesh.stop()}finally{running=false;status('RADIO DETENIDA','Los mensajes guardados siguen en este teléfono.');$('#radioButton').textContent='ACTIVAR BLUETOOTH';$('#radioButton').classList.remove('danger')}}
+async function send(){const input=$<HTMLInputElement>('#compose'),body=input.value.trim();if(!body)return;if(body.length>80){status('MENSAJE MUY LARGO','Máximo 80 caracteres por mensaje en esta versión.');return}const m={id:crypto.randomUUID().replaceAll('-','').slice(0,12),from:device,body,at:Date.now(),hops:0,ttl:8};seen.add(m.id);messages.push(m);persist();renderChat();input.value='';const n=running?await sendFrame(m):0;status(running?'RADIO ACTIVA':'SOLO EN ESTE TELÉFONO',n?'Transmitido a '+n+' conexión(es) BLE.':'Guardado localmente; no se transmitió porque no hay enlace BLE activo.')}
+SurvivalMesh.addListener('frame',e=>void receive(e.data,e.peerId||'peer'));
+SurvivalMesh.addListener('peer',p=>{$('#peers').textContent=p.connected?'Conectado: '+p.name:'Detectado: '+p.name});
+SurvivalMesh.addListener('state',s=>{if(s.state==='error'||s.state==='unavailable')status('REVISAR BLUETOOTH',s.detail||s.state)});
+$('#ask').addEventListener('click',ask);$('#question').addEventListener('keydown',e=>{if((e as KeyboardEvent).key==='Enter')ask()});
+$('#send').addEventListener('click',()=>void send());$('#compose').addEventListener('keydown',e=>{if((e as KeyboardEvent).key==='Enter')void send()});
+$('#radioButton').addEventListener('click',()=>void(running?stop():start()));
+$('#clear').addEventListener('click',()=>{if(confirm('¿Borrar el historial de este teléfono?')){messages=[];seen.clear();persist();renderChat()}});
+document.querySelectorAll<HTMLElement>('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab((b as HTMLElement).dataset.tab as 'assistant'|'mesh')));
+$('#device').textContent=device;tab('assistant');
+async function boot(){renderAssistant();renderChat();try{const r=await fetch('/knowledge.json');if(r.ok){const d=await r.json();if(Array.isArray(d))guides=d}}catch{/* la biblioteca se incluye en el paquete */}renderAssistant();await start()}
+void boot();
