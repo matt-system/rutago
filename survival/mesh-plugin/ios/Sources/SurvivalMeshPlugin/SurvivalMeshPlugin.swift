@@ -2,7 +2,6 @@ import Foundation
 import Capacitor
 import CoreBluetooth
 import UIKit
-import UIKit
 
 @objc(SurvivalMeshPlugin)
 public class SurvivalMeshPlugin: CAPPlugin, CAPBridgedPlugin, CBCentralManagerDelegate, CBPeripheralManagerDelegate, CBPeripheralDelegate {
