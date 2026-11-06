@@ -31,9 +31,40 @@ class MeshEnvelope {
   MeshEnvelope({required this.id, required this.ttl, required this.nonce, required this.cipherText, required this.mac});
   final String id, nonce, cipherText, mac;
   final int ttl;
-  Map<String, dynamic> toJson() => {'v':1,'id':id,'ttl':ttl,'nonce':nonce,'cipherText':cipherText,'mac':mac};
-  factory MeshEnvelope.fromJson(Map<String,dynamic> j) => MeshEnvelope(id:j['id'],ttl:j['ttl'],nonce:j['nonce'],cipherText:j['cipherText'],mac:j['mac']);
-  MeshEnvelope forwarded() => MeshEnvelope(id:id,ttl:ttl-1,nonce:nonce,cipherText:cipherText,mac:mac);
+
+  Map<String, dynamic> toJson() => {
+    'v': 1, 'id': id, 'ttl': ttl, 'nonce': nonce,
+    'cipherText': cipherText, 'mac': mac,
+  };
+
+  factory MeshEnvelope.fromJson(Map<String, dynamic> json) {
+    if (json['v'] != 1) throw const FormatException('Unsupported mesh packet version');
+    final id = json['id'];
+    final ttl = json['ttl'];
+    final nonce = json['nonce'];
+    final cipherText = json['cipherText'];
+    final mac = json['mac'];
+    if (id is! String || !RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id)) {
+      throw const FormatException('Invalid packet ID');
+    }
+    if (ttl is! int || ttl < 0 || ttl > 12) {
+      throw const FormatException('Invalid packet hop limit');
+    }
+    if (nonce is! String || base64Decode(nonce).length != 12) {
+      throw const FormatException('Invalid packet nonce');
+    }
+    if (mac is! String || base64Decode(mac).length != 16) {
+      throw const FormatException('Invalid packet authentication tag');
+    }
+    if (cipherText is! String || cipherText.length > 6000 || base64Decode(cipherText).length > 4096 + 128) {
+      throw const FormatException('Packet payload too large');
+    }
+    return MeshEnvelope(id:id, ttl:ttl, nonce:nonce, cipherText:cipherText, mac:mac);
+  }
+
+  MeshEnvelope forwarded() => MeshEnvelope(
+    id:id, ttl:ttl - 1, nonce:nonce, cipherText:cipherText, mac:mac,
+  );
 }
 
 class MeshEngine {
@@ -145,6 +176,7 @@ class MeshEngine {
 
   Future<void> _receive(Uint8List bytes) async {
     try {
+      if (bytes.length > 6200) return;
       final map = jsonDecode(utf8.decode(bytes)) as Map<String,dynamic>;
       final env = MeshEnvelope.fromJson(map);
       if (_seen.contains(env.id) || env.ttl < 0) return;
