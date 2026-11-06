@@ -7,7 +7,11 @@ on:
       - feature/meshbit-app
     paths:
       - "meshbit/**"
-      - ".github/workflows/meshbit-android.yml"
+      - "!meshbit/native/**"
+
+concurrency:
+  group: meshbit-legacy-android-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-android:
