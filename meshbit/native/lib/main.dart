@@ -132,6 +132,8 @@ class MeshEngine {
     final key = _parseKey(keyHex);
     if (key == null) throw Exception('La clave debe tener exactamente 64 caracteres hexadecimales.');
     if (destination.trim().isEmpty) throw Exception('Falta el ID del destinatario.');
+    if (text.trim().isEmpty) throw Exception('Escribe un mensaje antes de enviarlo.');
+    if (utf8.encode(text).length > 4096) throw Exception('El mensaje supera el límite de 4 KB.');
     final inner = jsonEncode({'from':nodeId,'to':destination.trim(),'text':text,'createdAt':DateTime.now().millisecondsSinceEpoch});
     final box = await _aes.encrypt(utf8.encode(inner), secretKey:SecretKey(key));
     final envelope = MeshEnvelope(id:_uuid.v4(),ttl:12,nonce:base64Encode(box.nonce),cipherText:base64Encode(box.cipherText),mac:base64Encode(box.mac.bytes));
@@ -208,13 +210,14 @@ class _MeshHomeState extends State<MeshHome> {
   late final MeshEngine engine;
   String status = 'MESH apagado';
   MeshEnvelope? lastEnvelope;
+  final List<MeshEnvelope> inbox = [];
   String decrypted = '';
   List<Peer> peers = [];
   final destination = TextEditingController();
   final body = TextEditingController();
   final key = TextEditingController();
   bool busy = false;
-  @override void initState() { super.initState(); engine = MeshEngine((s)=>setState(()=>status=s),(m)=>setState(()=>lastEnvelope=m),(p)=>setState(()=>peers=p)); }
+  @override void initState() { super.initState(); engine = MeshEngine((s)=>setState(()=>status=s),(m)=>setState((){lastEnvelope=m; if(!inbox.any((e)=>e.id==m.id)){inbox.insert(0,m); if(inbox.length>100) inbox.removeLast();} decrypted='';}),(p)=>setState(()=>peers=p)); }
   @override void dispose() { destination.dispose(); body.dispose(); key.dispose(); engine.dispose(); super.dispose(); }
   void notice(String s) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s))); }
   @override Widget build(BuildContext context) => Scaffold(
