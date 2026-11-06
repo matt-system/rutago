@@ -1,0 +1,37 @@
+name: Build MESHBIT Native iOS (unsigned validation)
+on:
+  workflow_dispatch:
+  push:
+    branches: [ feature/meshbit-app ]
+    paths:
+      - 'meshbit/native/**'
+      - '.github/workflows/meshbit-native-ios.yml'
+permissions:
+  contents: read
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate iOS project
+        working-directory: meshbit/native
+        run: flutter create --project-name meshbit --org app.meshbit --platforms=ios .
+      - name: Configure radio permissions
+        working-directory: meshbit/native
+        run: python3 tool/patch_platform.py
+      - name: Resolve packages
+        working-directory: meshbit/native
+        run: flutter pub get
+      - name: Analyze Dart
+        working-directory: meshbit/native
+        run: flutter analyze
+      - name: Run unit tests
+        working-directory: meshbit/native
+        run: flutter test
+      - name: Compile iOS without signing
+        working-directory: meshbit/native
+        run: flutter build ios --no-codesign
