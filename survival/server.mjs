@@ -2,7 +2,7 @@ import http from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../web");
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"web");
 const PORT=Number(process.env.PORT||8788),OLLAMA_URL=(process.env.OLLAMA_URL||"http://ollama:11434").replace(/\/$/,""),MODEL=process.env.OLLAMA_MODEL||"llama3.2:3b";
 const mime={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".svg":"image/svg+xml",".webmanifest":"application/manifest+json"};
 const server=http.createServer(async(req,res)=>{res.setHeader("Access-Control-Allow-Origin","*");res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");res.setHeader("Access-Control-Allow-Headers","Content-Type");if(req.method==="OPTIONS"){res.writeHead(204).end();return}
