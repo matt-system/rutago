@@ -5,6 +5,7 @@ import android.bluetooth.*
 import android.bluetooth.le.*
 import android.content.Context
 import android.os.ParcelUuid
+import android.os.Build
 import android.util.Base64
 import com.getcapacitor.*
 import com.getcapacitor.annotation.CapacitorPlugin
@@ -20,8 +21,9 @@ import java.util.concurrent.ConcurrentHashMap
         Permission(alias = "bluetooth", strings = [
             Manifest.permission.BLUETOOTH_SCAN,
             Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.BLUETOOTH_ADVERTISE,
-            Manifest.permission.ACCESS_FINE_LOCATION
+            Manifest.permission.BLUETOOTH_ADVERTISE
+        ]),
+        Permission(alias = "legacyLocation", strings = [Manifest.permission.ACCESS_FINE_LOCATION
         ])
     ]
 )
@@ -132,7 +134,7 @@ class SurvivalMeshPlugin : Plugin() {
     }
     private val clientCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-            if (newState == BluetoothProfile.STATE_CONNECTED) { connectedClientIds.add(gatt.device.address); gatt.requestMtu(185) }
+            if (newState == BluetoothProfile.STATE_CONNECTED) { connectedClientIds.add(gatt.device.address); if (!gatt.requestMtu(185)) gatt.discoverServices() }
             else { connectedClientIds.remove(gatt.device.address); clients.remove(gatt.device.address); rxChars.remove(gatt.device.address); txChars.remove(gatt.device.address); gatt.close() }
         }
         override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
