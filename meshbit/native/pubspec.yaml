@@ -12,7 +12,7 @@ dependencies:
   shared_preferences: ^2.3.2
   sqflite: ^2.3.3
   path: ^1.9.0
-  uuid: ^4.5.1\n  permission_handler: ^11.3.1
+  uuid: ^4.5.1\n  permission_handler: ^11.3.1\n  device_info_plus: ^11.3.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
