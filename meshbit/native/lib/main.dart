@@ -39,7 +39,7 @@ class MeshEngine {
   final void Function(String) onStatus;
   final void Function(MeshEnvelope) onMessage;
   final void Function(List<Peer>) onPeers;
-  final _nearby = NearbyService(localDisplayName: 'MESHBIT');
+  late final NearbyService _nearby;
   final _uuid = const Uuid();
   final _aes = AesGcm.with256bits();
   final _peers = <String, Peer>{};
@@ -52,7 +52,7 @@ class MeshEngine {
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     nodeId = prefs.getString('mesh.node') ?? _uuid.v4();
-    await prefs.setString('mesh.node', nodeId);
+    await prefs.setString('mesh.node', nodeId);\n    _nearby = NearbyService(localDisplayName:'MESHBIT', localPeerId:nodeId);
     final dbPath = p.join(await getDatabasesPath(), 'meshbit_mesh.db');
     _db = await openDatabase(dbPath, version:1, onCreate:(db,_) async {
       await db.execute('CREATE TABLE packets(id TEXT PRIMARY KEY, json TEXT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)');
@@ -157,7 +157,7 @@ class MeshEngine {
     for (final row in rows) {
       try {
         final env = MeshEnvelope.fromJson(jsonDecode(row['json'] as String));
-        if (!env.path.contains(nodeId) && env.ttl > 0) await _broadcast(env.forwarded(nodeId));
+        if (env.from == nodeId) {\n          await _broadcast(env);\n        } else if (!env.path.contains(nodeId) && env.ttl > 0) {\n          await _broadcast(env.forwarded(nodeId));\n        }
       } catch (_) {}
     }
   }
