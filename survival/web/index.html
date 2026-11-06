@@ -34,7 +34,7 @@ body{background:#080d0a;background-image:linear-gradient(#14221922 1px,transpare
  <div class="side-foot"><span class="dot"></span><b id="netLabel">Comprobando conexión</b><br>Tu espacio de conocimiento personal. Los datos guardados localmente permanecen en este dispositivo.</div>
 </aside>
 <main class="main">
- <header class="top"><div><div class="eyebrow">KNOWLEDGE THAT STAYS</div><h1 id="pageTitle">Centro de mando</h1></div><div class="topright"><div class="status"><b id="onlineText">● En línea</b></div><div class="avatar">SV</div></div></header>
+ <header class="top"><div><div class="eyebrow">KNOWLEDGE THAT STAYS</div><h1 id="pageTitle">SURVIVAL</h1></div><div class="topright"><div class="status"><b id="onlineText">● En línea</b></div><div class="avatar">SV</div></div></header>
  <section id="home" class="section active">
   <div class="grid">
    <article class="card hero"><span class="tag">TU CENTRO DE PREPARACIÓN</span><h2>El conocimiento no debería depender de Internet.</h2><p>Una base personal para aprender, prepararte y mantener a mano información esencial, incluso cuando no hay conexión.</p><button class="btn" onclick="go('library')">Explorar biblioteca →</button></article>
@@ -120,7 +120,7 @@ body{background:#080d0a;background-image:linear-gradient(#14221922 1px,transpare
  <div class="footer">SURVIVAL · OFFLINE KNOWLEDGE SYSTEM · Datos locales en tu dispositivo</div>
 </main></div>
 <script>
-const titles={mesh:"Chat cercano",home:"Centro de mando",library:"Biblioteca",maps:"Mapas y orientación",assistant:"Asistente IA",tools:"Herramientas",notes:"Notas personales",system:"Sistema"};
+const titles={mesh:"Chat cercano",home:"SURVIVAL",library:"Biblioteca",maps:"Mapas y orientación",assistant:"Asistente IA",tools:"Herramientas",notes:"Notas personales",system:"Sistema"};
 function go(page){document.querySelectorAll(".section").forEach(s=>s.classList.toggle("active",s.id===page));document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));document.getElementById("pageTitle").textContent=titles[page]||"SURVIVAL";window.scrollTo(0,0)}
 document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
 const guides={
