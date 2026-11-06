@@ -114,6 +114,12 @@ class MeshEngine {
   Future<void> start() async {
     if (running) return;
     await init();
+    if (Platform.isIOS) {
+      final bluetoothStatus = await Permission.bluetooth.request();
+      if (bluetoothStatus.isPermanentlyDenied || bluetoothStatus.isDenied) {
+        throw Exception('Activa Bluetooth para MESHBIT en Ajustes del iPhone.');
+      }
+    }
     if (Platform.isAndroid) {
       final android = await DeviceInfoPlugin().androidInfo;
       final requiredPermissions = android.version.sdkInt >= 31
@@ -146,10 +152,10 @@ class MeshEngine {
       if (payload.type != PayloadType.bytes || payload.bytes == null) return;
       await _receive(payload.bytes!);
     });
-    await _nearby.startAdvertising(options: const AdvertisingOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.hybrid,securityMode:SecurityMode.pinVerification));
+    await _nearby.startAdvertising(options: const AdvertisingOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.bleOnly,securityMode:SecurityMode.pinVerification));
     await _nearby.startDiscovery(options: const DiscoveryOptions(serviceId:'meshbit',strategy:DiscoveryStrategy.hybrid));
     running = true;
-    onStatus('Buscando dispositivos cercanos. No requiere internet ni datos móviles.');
+    onStatus('Bluetooth LE activo: busca teléfonos cercanos sin Wi-Fi ni datos móviles.');
   }
 
   String? _pendingRequest, _pendingPin;
@@ -358,7 +364,7 @@ class _MeshHomeState extends State<MeshHome> {
           ])
         )
       )),
-      const SizedBox(height:20),const Text('La retransmisión usa paquetes cifrados, TTL de 12 saltos y deduplicación por ID. Los nodos intermedios almacenan y reenvían el paquete sin descifrarlo. Los IDs de emisor y destinatario van dentro del cifrado. Los relays solo ven un ID aleatorio, TTL y ciphertext. Emisor y destinatario deben compartir la clave por un canal seguro.',style:TextStyle(color:Colors.white54,fontSize:12,height:1.5))
+      const SizedBox(height:20),const Text('La retransmisión usa paquetes cifrados, TTL de 12 saltos y deduplicación por ID. Los nodos intermedios almacenan y reenvían el paquete sin descifrarlo. MESH usa Bluetooth LE, sin Wi-Fi ni datos móviles. Los IDs de emisor y destinatario van dentro del cifrado. Los relays solo ven un ID aleatorio, TTL y ciphertext. Emisor y destinatario deben compartir la clave por un canal seguro.',style:TextStyle(color:Colors.white54,fontSize:12,height:1.5))
     ]),
   );
 }
