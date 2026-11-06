@@ -11,6 +11,8 @@ on:
 
 jobs:
   build-android:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -42,6 +44,18 @@ jobs:
           APK="android/app/build/outputs/apk/release/app-release.apk"
           ls -lh "$APK"
           du -h "$APK"
+      - name: Publish public test release (GitHub Releases, free)
+        working-directory: meshbit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: meshbit-test-${{ github.run_number }}
+        run: |
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          cp "$APK" /tmp/meshbit-android-arm64.apk
+          gh release create "$TAG" /tmp/meshbit-android-arm64.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Meshbit Android test build ${{ github.run_number }}" \
+            --notes "TEST BUILD ONLY. UI preview; end-to-end encryption, online relay and Bluetooth mesh are NOT implemented. Do not use for private or sensitive messages. Android arm64 only."
       - name: Upload optimized APK
         uses: actions/upload-artifact@v4
         with:
