@@ -486,114 +486,584 @@ class _MeshbitChatPageState extends State<MeshbitChatPage> {
 
 class MeshHome extends StatefulWidget {
   const MeshHome({super.key});
-  @override State<MeshHome> createState() => _MeshHomeState();
+  @override
+  State<MeshHome> createState() => _MeshHomeState();
 }
+
 class _MeshHomeState extends State<MeshHome> {
   late final MeshEngine engine;
-  String status = 'MESH apagado';
-  final List<MeshEnvelope> inbox = [];
-  final Map<String,String> decryptedMessages = {};
+  final composer = TextEditingController();
+  String status = 'Preparando Bluetooth…';
+  String alias = 'mesh-user';
+  String publicKey = '';
+  int selectedTab = 0;
+  String? selectedContactId;
+  String? selectedContactAlias;
+  List<Map<String,String>> contacts = [];
   List<Peer> peers = [];
-  final destination = TextEditingController();
-  final body = TextEditingController();
-  final key = TextEditingController();
+  List<MeshChatMessage> messages = [];
   bool busy = true;
+  bool bubbleMode = true;
   bool pinConfirmed = false;
   bool outgoingPinConfirmed = false;
-  @override void initState() {
+  bool _refreshing = false;
+
+  bool get _isPublicChat => selectedTab == 0;
+  String get _conversationId => _isPublicChat ? MeshEngine.publicChannelId : (selectedContactId ?? '');
+  String get _conversationTitle => _isPublicChat ? '#general' : (selectedContactAlias ?? 'Conversación privada');
+
+  @override
+  void initState() {
     super.initState();
     engine = MeshEngine(
-      (value) => setState(() {
-        status = value;
-        if (value.startsWith('Solicitud de conexión:')) pinConfirmed = false;
-      }),
-      (packet) => setState(() {
-        if (!inbox.any((item) => item.id == packet.id)) {
-          inbox.insert(0, packet);
-          if (inbox.length > 100) inbox.removeLast();
-        }
-      }),
-      (value) => setState(() => peers = value),
+      (value) {
+        if (!mounted) return;
+        setState(() {
+          status = value;
+          if (value.startsWith('Solicitud de conexión:')) pinConfirmed = false;
+        });
+      },
+      (_) {
+        _reloadConversation();
+      },
+      (value) {
+        if (mounted) setState(() => peers = value);
+      },
     );
-    _bootMesh();
+    _boot();
   }
 
-  Future<void> _bootMesh() async {
-    await _loadLocalInbox();
-    if (!mounted) return;
-    setState(() => busy = true);
+  Future<void> _boot() async {
     try {
+      await engine.init();
+      final loadedKey = await engine.getOrCreatePublicChannelKey();
+      final loadedAlias = await engine.loadAlias();
+      final loadedContacts = await engine.loadContacts();
+      if (!mounted) return;
+      setState(() {
+        publicKey = loadedKey;
+        alias = loadedAlias;
+        contacts = loadedContacts;
+      });
       await engine.start();
+      await _reloadConversation();
     } catch (error) {
-      if (mounted) notice('MESH necesita Bluetooth activado y los permisos correspondientes: $error');
+      if (mounted) notice('MESH no pudo iniciarse: $error');
     } finally {
       if (mounted) setState(() => busy = false);
     }
   }
 
-  Future<void> _loadLocalInbox() async {
+  Future<void> _reloadConversation() async {
+    if (_refreshing || !mounted || (publicKey.isEmpty && _isPublicChat)) return;
+    final conversationId = _conversationId;
+    if (conversationId.isEmpty) {
+      if (mounted) setState(() => messages = []);
+      return;
+    }
+    _refreshing = true;
     try {
-      final packets = await engine.loadInbox();
-      if (mounted) setState(() => inbox..clear()..addAll(packets));
-    } catch (error) {
-      if (mounted) notice('No se pudo abrir la bandeja local: $error');
+      final keyHex = _isPublicChat ? publicKey : await engine.loadContactKey(conversationId);
+      if (keyHex == null || keyHex.isEmpty) {
+        if (mounted) setState(() => messages = []);
+        return;
+      }
+      final loaded = await engine.loadConversation(conversationId, keyHex);
+      if (mounted && conversationId == _conversationId) setState(() => messages = loaded);
+    } finally {
+      _refreshing = false;
     }
   }
-  @override void dispose() { destination.dispose(); body.dispose(); key.dispose(); engine.dispose(); super.dispose(); }
-  void notice(String s) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s))); }
-  @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('MESHBIT',style:TextStyle(letterSpacing:4,fontWeight:FontWeight.w800)),actions:[IconButton(tooltip:'Abrir chat de Meshbit (requiere internet)',icon:const Icon(Icons.chat_bubble_outline),onPressed:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const MeshbitChatPage()))),Padding(padding:const EdgeInsets.only(right:16),child:Center(child:Text(engine.running?'MESH ACTIVO':'OFFLINE',style:TextStyle(color:engine.running?Colors.lightGreenAccent:Colors.white54,fontSize:11,letterSpacing:1.5))))]),
-    body: ListView(padding:const EdgeInsets.all(18),children:[
-      Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:const Color(0xff1b241e),borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xff35483a))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        const Text('RED LOCAL',style:TextStyle(color:Color(0xffa8c5ac),letterSpacing:2,fontSize:11)),
-        const SizedBox(height:8), Text(status,style:const TextStyle(fontSize:15)),
-        const SizedBox(height:12),
-        Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
-          Expanded(child:SelectableText('ID de este dispositivo\n${engine.nodeId.isEmpty?'Se genera al iniciar':engine.nodeId}',style:const TextStyle(color:Colors.white70,fontSize:12))),
-          IconButton(tooltip:'Copiar ID',onPressed:engine.nodeId.isEmpty?null:()async{await Clipboard.setData(ClipboardData(text:engine.nodeId));notice('ID copiado. Compártelo con tu contacto.');},icon:const Icon(Icons.copy))
+
+  @override
+  void dispose() {
+    composer.dispose();
+    engine.dispose();
+    super.dispose();
+  }
+
+  void notice(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _sendMessage() async {
+    final text = composer.text.trim();
+    if (text.isEmpty || busy) return;
+    final conversationId = _conversationId;
+    final keyHex = _isPublicChat ? publicKey : await engine.loadContactKey(conversationId);
+    if (keyHex == null || keyHex.isEmpty) {
+      notice('Falta la clave de esta conversación. Revísala en el contacto.');
+      return;
+    }
+    setState(() => busy = true);
+    try {
+      await engine.sendText(conversationId, text, keyHex, senderAlias: alias);
+      composer.clear();
+      await _reloadConversation();
+    } catch (error) {
+      notice('No se pudo preparar el mensaje: $error');
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> _showChannelKey() async {
+    final controller = TextEditingController(text: 'MESH1:$publicKey');
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xff1b241f),
+        title: const Text('Acceso al canal #general'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Esta clave permite leer y publicar en el canal local. Compártela solo con las personas que quieras incluir y por un canal de confianza.'),
+          const SizedBox(height: 14),
+          TextField(controller: controller, maxLines: 3, decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Código de acceso')),
         ]),
-        const SizedBox(height:16),Row(children:[Expanded(child:FilledButton.icon(onPressed:busy||engine.running?null:()async{setState(()=>busy=true);try{await engine.start();}catch(e){notice('No se pudo iniciar MESH: $e');}finally{if(mounted)setState(()=>busy=false);}},icon:const Icon(Icons.radar),label:const Text('INICIAR MESH'))),const SizedBox(width:8),OutlinedButton(onPressed:engine.running?()=>engine.stop():null,child:const Text('DETENER'))])
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: 'MESH1:$publicKey'));
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              notice('Código copiado. Compártelo fuera de MESHBIT.');
+            },
+            child: const Text('COPIAR'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              var value = controller.text.trim();
+              if (value.startsWith('MESH1:')) value = value.substring(6);
+              try {
+                await engine.savePublicChannelKey(value);
+                if (mounted) setState(() => publicKey = value);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+                await _reloadConversation();
+                notice('Clave del canal actualizada en el almacén seguro.');
+              } catch (error) {
+                notice(error.toString());
+              }
+            },
+            child: const Text('GUARDAR CLAVE'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+  }
+
+  Future<void> _addContact() async {
+    final aliasController = TextEditingController();
+    final idController = TextEditingController();
+    final keyController = TextEditingController();
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xff1b241f),
+          title: const Text('Añadir conversación privada'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(controller: aliasController, decoration: const InputDecoration(labelText: 'Alias', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: idController, decoration: const InputDecoration(labelText: 'ID MESH del contacto', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: keyController, obscureText: true, decoration: const InputDecoration(labelText: 'Clave compartida · 64 caracteres hex', border: OutlineInputBorder())),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    setDialogState(() => keyController.text = MeshEngine.generateKey());
+                    await Clipboard.setData(ClipboardData(text: keyController.text));
+                    if (dialogContext.mounted) ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(content: Text('Clave generada y copiada. Compártela por otro canal seguro.')));
+                  },
+                  icon: const Icon(Icons.key),
+                  label: const Text('GENERAR Y COPIAR CLAVE'),
+                ),
+              ),
+              const Text('La misma clave debe guardarse en ambos teléfonos. El secreto se guarda en Keychain o en el almacén protegido de Android.', style: TextStyle(color: Colors.white60, fontSize: 12)),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('CANCELAR')),
+            FilledButton(
+              onPressed: () async {
+                try {
+                  await engine.saveContact(idController.text, aliasController.text);
+                  await engine.saveContactKey(idController.text.trim(), keyController.text);
+                  final updated = await engine.loadContacts();
+                  if (mounted) setState(() => contacts = updated);
+                  if (dialogContext.mounted) Navigator.pop(dialogContext);
+                  notice('Contacto guardado. La clave quedó protegida por el sistema del teléfono.');
+                } catch (error) {
+                  notice(error.toString());
+                }
+              },
+              child: const Text('GUARDAR'),
+            ),
+          ],
+        ),
+      ),
+    );
+    aliasController.dispose();
+    idController.dispose();
+    keyController.dispose();
+  }
+
+  Future<void> _removeContact(Map<String,String> contact) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xff1b241f),
+        title: const Text('Eliminar contacto'),
+        content: Text('¿Eliminar la conversación con ${contact['alias']} y borrar su clave guardada de este teléfono?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('CANCELAR')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('ELIMINAR')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await engine.removeContact(contact['id']!);
+    final updated = await engine.loadContacts();
+    if (mounted) setState(() => contacts = updated);
+  }
+
+  Future<void> _showProfile() async {
+    final controller = TextEditingController(text: alias);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xff1b241f),
+        title: const Text('Tu identidad local'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          TextField(controller: controller, maxLength: 24, decoration: const InputDecoration(labelText: 'Alias visible en los chats', border: OutlineInputBorder())),
+          const SizedBox(height: 12),
+          const Text('ID privado del dispositivo', style: TextStyle(color: Color(0xffa8c5ac), fontSize: 12)),
+          SelectableText(engine.nodeId, style: const TextStyle(fontSize: 12)),
+          TextButton.icon(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: engine.nodeId));
+              notice('ID copiado.');
+            },
+            icon: const Icon(Icons.copy),
+            label: const Text('COPIAR ID'),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('CERRAR')),
+          FilledButton(
+            onPressed: () async {
+              final cleaned = controller.text.trim();
+              await engine.saveAlias(cleaned);
+              if (mounted) setState(() => alias = cleaned.isEmpty ? 'mesh-user' : cleaned.substring(0, cleaned.length > 24 ? 24 : cleaned.length));
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+            },
+            child: const Text('GUARDAR ALIAS'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+  }
+
+  void _selectTab(int tab) {
+    setState(() {
+      selectedTab = tab;
+      if (tab != 1) selectedContactId = null;
+      selectedContactAlias = null;
+    });
+    _reloadConversation();
+  }
+
+  void _openContact(Map<String,String> contact) {
+    setState(() {
+      selectedTab = 1;
+      selectedContactId = contact['id'];
+      selectedContactAlias = contact['alias'];
+    });
+    _reloadConversation();
+  }
+
+  Widget _chatHeader() => Container(
+    padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+    decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xff28342c)))),
+    child: Row(children: [
+      Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(color: const Color(0xff24372a), borderRadius: BorderRadius.circular(12)),
+        child: Icon(_isPublicChat ? Icons.hub_outlined : Icons.lock_outline, color: const Color(0xffa8c5ac), size: 19),
+      ),
+      const SizedBox(width: 11),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(_conversationTitle, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        Text(_isPublicChat ? 'Canal local cifrado · Bluetooth LE' : 'Privado · clave compartida', style: const TextStyle(fontSize: 11, color: Colors.white54)),
       ])),
-      if (engine.pendingPeer != null) Card(color:const Color(0xff332d1a),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('VERIFICACIÓN DE VECINO',style:TextStyle(fontWeight:FontWeight.bold)),Text('Código de seguridad: ${engine.pendingPin}'),CheckboxListTile(contentPadding:EdgeInsets.zero,value:pinConfirmed,onChanged:(value)=>setState(()=>pinConfirmed=value??false),title:const Text('He comparado el código en ambos teléfonos')),const SizedBox(height:8),FilledButton(onPressed:pinConfirmed?()async{try{await engine.acceptPending(pinConfirmed:pinConfirmed);setState(()=>pinConfirmed=false);}catch(e){notice(e.toString());}}:null,child:const Text('ACEPTAR CONEXIÓN'))]))),
-      if (engine.pendingOutgoingPin != null) Card(color:const Color(0xff203047),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        const Text('VERIFICA ESTE VECINO',style:TextStyle(fontWeight:FontWeight.bold)),
-        Text('Código de seguridad: ${engine.pendingOutgoingPin}'),
-        CheckboxListTile(contentPadding:EdgeInsets.zero,value:outgoingPinConfirmed,onChanged:(value)=>setState(()=>outgoingPinConfirmed=value??false),title:const Text('El código coincide con el otro teléfono')),
-        FilledButton(onPressed:outgoingPinConfirmed?()async{try{await engine.confirmOutgoingPin(pinConfirmed:outgoingPinConfirmed);setState(()=>outgoingPinConfirmed=false);}catch(e){notice(e.toString());}}:null,child:const Text('CONFIRMAR VECINO'))
-      ]))),
-      const SizedBox(height:18),const Text('DISPOSITIVOS CERCANOS',style:TextStyle(letterSpacing:2,fontSize:11,color:Color(0xffa8c5ac))),
-      if(peers.isEmpty) const Padding(padding:EdgeInsets.symmetric(vertical:16),child:Text('Todavía no se detectan vecinos. Ambos teléfonos deben abrir MESHBIT e iniciar la búsqueda.')),
-      ...peers.map((peer)=>ListTile(leading:const Icon(Icons.bluetooth_searching),title:Text(peer.displayName),subtitle:Text(peer.id),trailing:TextButton(onPressed:()=>engine.connect(peer),child:const Text('CONECTAR')))),
-      const Divider(height:32),const Text('MENSAJE CIFRADO',style:TextStyle(letterSpacing:2,fontSize:11,color:Color(0xffa8c5ac))),
-      const SizedBox(height:8),TextField(controller:destination,decoration:const InputDecoration(labelText:'ID del destinatario',hintText:'ID MESHBIT del otro dispositivo',border:OutlineInputBorder())),
-      const SizedBox(height:10),TextField(controller:key,decoration:InputDecoration(labelText:'Clave de conversación (64 caracteres hex)',border:const OutlineInputBorder(),suffixIcon:IconButton(tooltip:'Copiar clave',icon:const Icon(Icons.copy),onPressed:()async{if(key.text.isEmpty){notice('Primero genera o ingresa una clave.');return;}await Clipboard.setData(ClipboardData(text:key.text));notice('Clave copiada. Compártela por un canal seguro, nunca por MESH.');})),obscureText:true),
-      Align(alignment:Alignment.centerLeft,child:TextButton.icon(onPressed:()=>setState(()=>key.text=MeshEngine.generateKey()),icon:const Icon(Icons.key),label:const Text('GENERAR CLAVE SEGURA'))),
-      const SizedBox(height:8),TextField(controller:body,minLines:2,maxLines:4,decoration:const InputDecoration(labelText:'Mensaje',border:OutlineInputBorder())),
-      const SizedBox(height:12),FilledButton.icon(onPressed:busy?null:()async{setState(()=>busy=true);try{await engine.sendText(destination.text,body.text,key.text);body.clear();notice('Mensaje guardado en la cola mesh.');}catch(e){notice(e.toString());}finally{if(mounted)setState(()=>busy=false);}},icon:const Icon(Icons.send),label:const Text('ENVIAR POR MESH')),
-      const SizedBox(height:18),
-      Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
-        const Text('BANDEJA MESH',style:TextStyle(letterSpacing:2,fontSize:11,color:Color(0xffa8c5ac))),
-        Text('${inbox.length} paquetes',style:const TextStyle(color:Colors.white54,fontSize:12))
-      ]),
-      if(inbox.isEmpty) const Padding(padding:EdgeInsets.symmetric(vertical:14),child:Text('Los mensajes que lleguen por esta red aparecerán aquí. Los nodos intermedios los guardan y reenvían sin leerlos.')),
-      ...inbox.map((packet)=>Card(
-        color:const Color(0xff202b23),
-        child:Padding(
-          padding:const EdgeInsets.all(14),
-          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Text('PAQUETE ${packet.id.substring(0,8)} · TTL ${packet.ttl}',style:const TextStyle(color:Color(0xffa8c5ac),fontSize:11,letterSpacing:1)),
-            const SizedBox(height:8),
-            FilledButton.tonal(onPressed:()async{
-              try{
-                final clear=await engine.decryptMessage(packet,key.text);
-                setState(()=>decryptedMessages[packet.id]=clear);
-              }catch(e){notice('No se pudo abrir: clave incorrecta, paquete alterado o destinatario distinto.');}
-            },child:const Text('ABRIR CON CLAVE')),
-            if(decryptedMessages.containsKey(packet.id)) Padding(padding:const EdgeInsets.only(top:10),child:Text(decryptedMessages[packet.id]!,style:const TextStyle(fontSize:16)))
-          ])
-        )
-      )),
-      const SizedBox(height:20),const Text('La retransmisión usa paquetes cifrados, TTL de 12 saltos y deduplicación por ID. Los nodos intermedios almacenan y reenvían el paquete sin descifrarlo. MESH usa Bluetooth LE, sin Wi-Fi ni datos móviles. Los IDs de emisor y destinatario van dentro del cifrado. Los relays solo ven un ID aleatorio, TTL y ciphertext. Emisor y destinatario deben compartir la clave por un canal seguro.',style:TextStyle(color:Colors.white54,fontSize:12,height:1.5))
+      if (_isPublicChat) IconButton(tooltip: 'Clave del canal', onPressed: _showChannelKey, icon: const Icon(Icons.vpn_key_outlined, color: Color(0xffa8c5ac))),
+      IconButton(tooltip: bubbleMode ? 'Cambiar a vista terminal' : 'Cambiar a burbujas', onPressed: () => setState(() => bubbleMode = !bubbleMode), icon: Icon(bubbleMode ? Icons.subject : Icons.chat_bubble_outline, color: const Color(0xffa8c5ac))),
     ]),
+  );
+
+  String _timeLabel(DateTime time) {
+    final local = time.toLocal();
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  Widget _messageTile(MeshChatMessage message) {
+    final mine = message.isMine;
+    if (!bubbleMode) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Text(mine ? 'tú' : message.senderAlias, style: TextStyle(color: mine ? const Color(0xffa8c5ac) : const Color(0xffd3bb8b), fontWeight: FontWeight.w700, fontSize: 12)),
+            const SizedBox(width: 8),
+            Text(_timeLabel(message.createdAt), style: const TextStyle(color: Colors.white30, fontSize: 10)),
+          ]),
+          const SizedBox(height: 3),
+          Text(message.text, style: const TextStyle(fontSize: 14, height: 1.4, color: Color(0xffe6ece7))),
+        ]),
+      );
+    }
+    return Align(
+      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+          decoration: BoxDecoration(
+            color: mine ? const Color(0xff294332) : const Color(0xff202923),
+            border: Border.all(color: mine ? const Color(0xff466b50) : const Color(0xff303b33)),
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(17),
+              topRight: const Radius.circular(17),
+              bottomLeft: Radius.circular(mine ? 17 : 5),
+              bottomRight: Radius.circular(mine ? 5 : 17),
+            ),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (!mine) Text(message.senderAlias, style: const TextStyle(color: Color(0xffb7cbb9), fontWeight: FontWeight.w700, fontSize: 11)),
+            Text(message.text, style: const TextStyle(fontSize: 14, height: 1.4, color: Color(0xffedf3ee))),
+            const SizedBox(height: 3),
+            Align(alignment: Alignment.centerRight, child: Text(_timeLabel(message.createdAt), style: const TextStyle(color: Colors.white38, fontSize: 10))),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChat() {
+    final hasKey = _isPublicChat ? publicKey.isNotEmpty : selectedContactId != null;
+    return Column(children: [
+      _chatHeader(),
+      Expanded(
+        child: messages.isEmpty
+          ? Center(child: Padding(
+              padding: const EdgeInsets.all(30),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(_isPublicChat ? Icons.waves : Icons.lock_outline, size: 42, color: const Color(0xff607965)),
+                const SizedBox(height: 14),
+                Text(_isPublicChat ? 'El canal está en silencio' : 'Conversación privada lista', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 7),
+                Text(
+                  _isPublicChat
+                    ? 'Comparte la clave de #general con tus contactos. Los teléfonos cercanos pueden intercambiar mensajes sin Internet.'
+                    : 'Envía un mensaje. Si el contacto todavía no está cerca, el paquete permanecerá guardado en la red hasta que aparezca una ruta.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white54, height: 1.5),
+                ),
+              ]),
+            ))
+          : ListView.builder(
+              itemCount: messages.length,
+              padding: const EdgeInsets.only(top: 12, bottom: 16),
+              itemBuilder: (context, index) => _messageTile(messages[index]),
+            ),
+      ),
+      SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+          decoration: const BoxDecoration(color: Color(0xff151c17), border: Border(top: BorderSide(color: Color(0xff28342c)))),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Expanded(child: TextField(
+              controller: composer,
+              minLines: 1,
+              maxLines: 4,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => _sendMessage(),
+              decoration: InputDecoration(
+                hintText: hasKey ? 'Mensaje…' : 'Clave no disponible',
+                filled: true,
+                fillColor: const Color(0xff202923),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
+              ),
+            )),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 46,
+              height: 46,
+              child: FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xff78977d), foregroundColor: const Color(0xff0d140f), padding: EdgeInsets.zero, shape: const CircleBorder()),
+                onPressed: busy || !hasKey ? null : _sendMessage,
+                child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.arrow_upward),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildContacts() {
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+        child: Row(children: [
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('CONVERSACIONES', style: TextStyle(color: Color(0xffa8c5ac), fontSize: 11, letterSpacing: 2)),
+            SizedBox(height: 4),
+            Text('Tus contactos privados', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          ])),
+          FilledButton.icon(onPressed: _addContact, icon: const Icon(Icons.add, size: 18), label: const Text('AÑADIR')),
+        ]),
+      ),
+      Expanded(
+        child: contacts.isEmpty
+          ? const Center(child: Padding(
+              padding: EdgeInsets.all(28),
+              child: Text('Todavía no tienes contactos. Añade el ID MESH de una persona y guarda una clave privada compartida.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white54, height: 1.5)),
+            ))
+          : ListView.separated(
+              itemCount: contacts.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xff28342c)),
+              itemBuilder: (context, index) {
+                final contact = contacts[index];
+                final contactAlias = contact['alias'] ?? 'Contacto';
+                return ListTile(
+                  leading: CircleAvatar(backgroundColor: const Color(0xff2b4031), child: Text(contactAlias.isEmpty ? '?' : contactAlias.substring(0, 1).toUpperCase(), style: const TextStyle(color: Color(0xffc6d9c8)))),
+                  title: Text(contactAlias, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(contact['id'] ?? '', style: const TextStyle(fontSize: 10, color: Colors.white38), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: PopupMenuButton<String>(onSelected: (choice) { if (choice == 'remove') _removeContact(contact); }, itemBuilder: (_) => const [PopupMenuItem(value: 'remove', child: Text('Eliminar contacto'))]),
+                  onTap: () => _openContact(contact),
+                );
+              },
+            ),
+      ),
+    ]);
+  }
+
+  Widget _buildNodes() {
+    final incoming = engine.pendingPeer;
+    final outgoing = engine.pendingOutgoingPin;
+    return ListView(padding: const EdgeInsets.all(18), children: [
+      Container(
+        padding: const EdgeInsets.all(17),
+        decoration: BoxDecoration(color: const Color(0xff1c2820), borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xff344a39))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('ESTADO DE LA RED', style: TextStyle(color: Color(0xffa8c5ac), fontSize: 11, letterSpacing: 2)),
+          const SizedBox(height: 9),
+          Row(children: [
+            Icon(engine.running ? Icons.bluetooth_connected : Icons.bluetooth_disabled, color: engine.running ? const Color(0xff9bd4a1) : Colors.white54),
+            const SizedBox(width: 9),
+            Expanded(child: Text(status, style: const TextStyle(fontSize: 13, height: 1.4))),
+          ]),
+          const SizedBox(height: 9),
+          Text('${engine.connectedPeerCount} conexiones activas · ${peers.length} nodos detectados', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+        ]),
+      ),
+      if (incoming != null) Card(
+        color: const Color(0xff342e1c),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('SOLICITUD DE CONEXIÓN', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xffe9d4a0))),
+            Text('Código de seguridad: ${engine.pendingPin}', style: const TextStyle(fontSize: 15)),
+            CheckboxListTile(contentPadding: EdgeInsets.zero, value: pinConfirmed, onChanged: (value) => setState(() => pinConfirmed = value ?? false), title: const Text('He comparado el código en ambos teléfonos')),
+            FilledButton(onPressed: pinConfirmed ? () async {
+              try {
+                await engine.acceptPending(pinConfirmed: true);
+                setState(() => pinConfirmed = false);
+              } catch (error) { notice(error.toString()); }
+            } : null, child: const Text('ACEPTAR CONEXIÓN')),
+          ]),
+        ),
+      ),
+      if (outgoing != null) Card(
+        color: const Color(0xff203047),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('VERIFICA ESTE VECINO', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Código de seguridad: $outgoing', style: const TextStyle(fontSize: 15)),
+            CheckboxListTile(contentPadding: EdgeInsets.zero, value: outgoingPinConfirmed, onChanged: (value) => setState(() => outgoingPinConfirmed = value ?? false), title: const Text('El código coincide con el otro teléfono')),
+            FilledButton(onPressed: outgoingPinConfirmed ? () async {
+              try {
+                await engine.confirmOutgoingPin(pinConfirmed: true);
+                setState(() => outgoingPinConfirmed = false);
+              } catch (error) { notice(error.toString()); }
+            } : null, child: const Text('CONFIRMAR VECINO')),
+          ]),
+        ),
+      ),
+      const SizedBox(height: 17),
+      Row(children: [
+        const Expanded(child: Text('DISPOSITIVOS CERCANOS', style: TextStyle(color: Color(0xffa8c5ac), fontSize: 11, letterSpacing: 2))),
+        IconButton(onPressed: () => setState(() => peers = List<Peer>.from(peers)), icon: const Icon(Icons.refresh)),
+      ]),
+      if (peers.isEmpty) const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Text('No hay dispositivos visibles por Bluetooth en este momento. Mantén MESHBIT abierto en los teléfonos cercanos.', style: TextStyle(color: Colors.white54)),
+      ),
+      ...peers.map((peer) => Card(
+        color: const Color(0xff1b241f),
+        child: ListTile(
+          leading: const Icon(Icons.bluetooth_searching, color: Color(0xffa8c5ac)),
+          title: Text(peer.displayName),
+          subtitle: Text(peer.id, style: const TextStyle(fontSize: 10, color: Colors.white38)),
+          trailing: TextButton(onPressed: () => engine.connect(peer), child: const Text('CONECTAR')),
+        ),
+      )),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      backgroundColor: const Color(0xff101611),
+      titleSpacing: 16,
+      title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('MESHBIT', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 3, fontSize: 18)),
+        Text(engine.running ? 'RED LOCAL ACTIVA' : 'INICIANDO RED LOCAL', style: const TextStyle(fontSize: 9, letterSpacing: 1.8, color: Color(0xff9fbaa4))),
+      ]),
+      actions: [
+        if (selectedTab == 0 || (selectedTab == 1 && selectedContactId != null))
+          IconButton(tooltip: bubbleMode ? 'Vista terminal' : 'Vista burbujas', onPressed: () => setState(() => bubbleMode = !bubbleMode), icon: Icon(bubbleMode ? Icons.subject : Icons.chat_bubble_outline)),
+        IconButton(tooltip: 'Mi identidad', onPressed: _showProfile, icon: const Icon(Icons.person_outline)),
+      ],
+    ),
+    body: IndexedStack(
+      index: selectedTab,
+      children: [
+        _buildChat(),
+        selectedContactId == null ? _buildContacts() : _buildChat(),
+        _buildNodes(),
+      ],
+    ),
+    bottomNavigationBar: NavigationBar(
+      backgroundColor: const Color(0xff151c17),
+      indicatorColor: const Color(0xff2a3b2e),
+      selectedIndex: selectedTab,
+      onDestinationSelected: _selectTab,
+      destinations: const [
+        NavigationDestination(icon: Icon(Icons.hub_outlined), selectedIcon: Icon(Icons.hub), label: 'MESH'),
+        NavigationDestination(icon: Icon(Icons.lock_outline), selectedIcon: Icon(Icons.lock), label: 'PRIVADOS'),
+        NavigationDestination(icon: Icon(Icons.radar), selectedIcon: Icon(Icons.radar), label: 'NODOS'),
+      ],
+    ),
   );
 }
