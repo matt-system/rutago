@@ -312,7 +312,6 @@ class _MeshHomeState extends State<MeshHome> {
   bool busy = false;
   @override void initState() { super.initState(); engine = MeshEngine((s)=>setState(()=>status=s),(m)=>setState((){if(!inbox.any((e)=>e.id==m.id)){inbox.insert(0,m); if(inbox.length>100) inbox.removeLast();}}),(p)=>setState(()=>peers=p)); _loadLocalInbox(); }
   Future<void> _loadLocalInbox() async { try { final packets=await engine.loadInbox(); if(mounted) setState(()=>inbox..clear()..addAll(packets)); } catch(e) { if(mounted) notice('No se pudo abrir la bandeja local: $e'); } }
-  @override void didChangeDependencies() { super.didChangeDependencies(); }
   @override void dispose() { destination.dispose(); body.dispose(); key.dispose(); engine.dispose(); super.dispose(); }
   void notice(String s) { if (!mounted) return; ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s))); }
   @override Widget build(BuildContext context) => Scaffold(
