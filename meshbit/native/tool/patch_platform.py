@@ -1,5 +1,6 @@
 from pathlib import Path
 import plistlib
+import re
 
 root = Path(__file__).resolve().parents[1]
 manifest = root / "android/app/src/main/AndroidManifest.xml"
@@ -19,7 +20,7 @@ if manifest.exists():
 """
     if "android.permission.BLUETOOTH_SCAN" not in text:
         text = text.replace("<application", permissions + "\n    <application", 1)
-    text = text.replace('android:label="meshbit"', 'android:label="MESHBIT"')
+    text = re.sub(r'android:label="[^"]+"', 'android:label="MESHBIT"', text, count=1)
     manifest.write_text(text)
 
 plist = root / "ios/Runner/Info.plist"
