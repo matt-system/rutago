@@ -33,6 +33,8 @@ jobs:
         run: npm install
       - name: Typecheck encrypted messaging client
         run: npm run typecheck
+      - name: Test encryption primitives
+        run: npm run test:crypto
       - name: Generate clean native Android project
         run: npx expo prebuild --clean --platform android --non-interactive
       - name: Build optimized arm64 release APK
