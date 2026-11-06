@@ -1,5 +1,5 @@
-const CACHE="survival-shell-v7";
-const CORE=["/","/index.html","/manifest.webmanifest","/icon.svg","/knowledge.json","/compartir.html"];
+const CACHE="survival-shell-v8";
+const CORE=["/","/index.html","/manifest.webmanifest","/icon.svg","/knowledge.json"];
 self.addEventListener("install",event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()));
 });
