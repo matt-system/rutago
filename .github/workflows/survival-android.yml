@@ -1,11 +1,5 @@
-name: Build SURVIVAL Android APK
+name: Build SURVIVAL Android APK (manual fallback)
 on:
-  push:
-    branches: [survival]
-    paths:
-      - 'survival/mobile-app/**'
-      - 'survival/mesh-plugin/**'
-      - '.github/workflows/survival-android.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -14,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: survival
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -23,20 +19,24 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
       - name: Install dependencies
         working-directory: survival/mobile-app
         run: npm install
-      - name: Build web bundle
+      - name: TypeScript and web build
         working-directory: survival/mobile-app
         run: npm run build
-      - name: Generate Android project and sync native plugin
+      - name: Generate Android project and sync BLE plugin
         working-directory: survival/mobile-app
         run: |
           npx cap add android
           npx cap sync android
       - name: Build debug APK
         working-directory: survival/mobile-app/android
-        run: ./gradlew assembleDebug
+        run: ./gradlew --no-daemon assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: survival-android-debug
