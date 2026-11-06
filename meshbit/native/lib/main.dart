@@ -85,9 +85,13 @@ class MeshEngine {
   bool _initialized = false;
   Future<void>? _initFuture;
 
-  Future<void> init() {
-    if (_initialized) return Future.value();
-    return _initFuture ??= _initialize();
+  Future<void> init() async {
+    if (_initialized) return;
+    final pending = _initFuture;
+    if (pending != null) { await pending; return; }
+    final future = _initialize();
+    _initFuture = future;
+    try { await future; } catch (_) { _initFuture = null; rethrow; }
   }
 
   Future<void> _initialize() async {
