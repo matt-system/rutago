@@ -230,9 +230,10 @@ class MeshEngine {
     if (destination.trim().isEmpty) throw Exception('Falta el ID del destinatario.');
     if (text.trim().isEmpty) throw Exception('Escribe un mensaje antes de enviarlo.');
     if (utf8.encode(text).length > 4096) throw Exception('El mensaje supera el límite de 4 KB.');
-    final inner = jsonEncode({'from':nodeId,'to':destination.trim(),'text':text,'createdAt':DateTime.now().millisecondsSinceEpoch});
+    final packetId = _uuid.v4();
+    final inner = jsonEncode({'id':packetId,'from':nodeId,'to':destination.trim(),'text':text,'createdAt':DateTime.now().millisecondsSinceEpoch});
     final box = await _aes.encrypt(utf8.encode(inner), secretKey:SecretKey(key));
-    final envelope = MeshEnvelope(id:_uuid.v4(),ttl:12,nonce:base64Encode(box.nonce),cipherText:base64Encode(box.cipherText),mac:base64Encode(box.mac.bytes));
+    final envelope = MeshEnvelope(id:packetId,ttl:12,nonce:base64Encode(box.nonce),cipherText:base64Encode(box.cipherText),mac:base64Encode(box.mac.bytes));
     _seen.add(envelope.id);
     await _store(envelope, originated:true);
     await _broadcast(envelope);
@@ -270,6 +271,7 @@ class MeshEngine {
     final clear = await _aes.decrypt(SecretBox(base64Decode(env.cipherText), nonce:base64Decode(env.nonce), mac:Mac(base64Decode(env.mac))), secretKey:SecretKey(key));
     final decoded = jsonDecode(utf8.decode(clear)) as Map<String,dynamic>;
     if (decoded['to'] != nodeId) throw Exception('Este paquete no está dirigido a este dispositivo.');
+    if (decoded['id'] != env.id) throw Exception('El identificador del paquete no coincide con el contenido cifrado.');
     await _db!.update('packets', {'delivered':1}, where:'id=?', whereArgs:[env.id]);
     return '${decoded['from']}: ${decoded['text']}';
   }
