@@ -4,11 +4,20 @@ plugins {
 }
 
 android {
-    namespace 'cl.survival.mesh'
+    namespace 'cl.survival.mesh.plugin'
     compileSdk 35
 
     defaultConfig {
         minSdk 23
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
     }
 }
 
