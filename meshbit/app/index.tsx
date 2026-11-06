@@ -5,7 +5,7 @@ import {Identity,generateIdentity,encryptMessage,decryptMessage,fingerprint,newA
 import * as Api from "../src/crypto/api";
 
 type ChatItem={id:string;sender:string;body:string;mine:boolean;time:number};
-const ID_KEY="meshbit.identity.v1", TOKEN_KEY="meshbit.auth.v1";
+const ID_KEY="meshbit.identity.v1", TOKEN_KEY="meshbit.auth.v1", USER_KEY="meshbit.username.v1";
 
 export default function Home(){
  const [identity,setIdentity]=useState<Identity|null>(null);
@@ -24,14 +24,18 @@ export default function Home(){
 
  useEffect(()=>{(async()=>{
   try{
-   const savedIdentity=await SecureStore.getItemAsync(ID_KEY);
-   const savedToken=await SecureStore.getItemAsync(TOKEN_KEY);
+   const [savedIdentity,savedToken,savedUsername]=await Promise.all([
+    SecureStore.getItemAsync(ID_KEY),SecureStore.getItemAsync(TOKEN_KEY),SecureStore.getItemAsync(USER_KEY)
+   ]);
    if(savedIdentity&&savedToken){
     const parsed=JSON.parse(savedIdentity) as Identity;
-    const me=await Api.me(savedToken);
-    setIdentity(parsed);setToken(savedToken);setUsername(me.username);
+    setIdentity(parsed);setToken(savedToken);setUsername(savedUsername||"");
     setMyFingerprint(await fingerprint(parsed.boxPublicKey,parsed.signingPublicKey));
-    setStatus("CUENTA CONECTADA · CIFRADO ACTIVADO");
+    try{
+     const me=await Api.me(savedToken);setUsername(me.username);
+     await SecureStore.setItemAsync(USER_KEY,me.username);
+     setStatus("CUENTA CONECTADA · CIFRADO IMPLEMENTADO");
+    }catch{setStatus("SIN CONEXIÓN · REINTENTANDO RELAY");}
    }else setStatus("CREA TU CUENTA");
   }catch(e){setError(String(e));setStatus("NO SE PUDO RECUPERAR LA CUENTA");}
  })();},[]);
@@ -45,9 +49,10 @@ export default function Home(){
    const created=await Api.register(name,auth,keys.boxPublicKey,keys.signingPublicKey);
    await SecureStore.setItemAsync(ID_KEY,JSON.stringify(keys));
    await SecureStore.setItemAsync(TOKEN_KEY,auth);
+   await SecureStore.setItemAsync(USER_KEY,created.username);
    setIdentity(keys);setToken(auth);setUsername(created.username);
    setMyFingerprint(await fingerprint(keys.boxPublicKey,keys.signingPublicKey));
-   setStatus("CUENTA CONECTADA · CIFRADO ACTIVADO");
+   setStatus("CUENTA CONECTADA · CIFRADO IMPLEMENTADO");
   }catch(e){setError(e instanceof Error?e.message:String(e));}
   finally{setBusy(false);}
  }
