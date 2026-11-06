@@ -28,13 +28,12 @@ class MeshbitApp extends StatelessWidget {
 }
 
 class MeshEnvelope {
-  MeshEnvelope({required this.id, required this.from, required this.to, required this.createdAt, required this.ttl, required this.path, required this.nonce, required this.cipherText, required this.mac});
-  final String id, from, to, nonce, cipherText, mac;
-  final int createdAt, ttl;
-  final List<String> path;
-  Map<String, dynamic> toJson() => {'v':1,'id':id,'from':from,'to':to,'createdAt':createdAt,'ttl':ttl,'path':path,'nonce':nonce,'cipherText':cipherText,'mac':mac};
-  factory MeshEnvelope.fromJson(Map<String,dynamic> j) => MeshEnvelope(id:j['id'],from:j['from'],to:j['to'],createdAt:j['createdAt'],ttl:j['ttl'],path:List<String>.from(j['path'] ?? const []),nonce:j['nonce'],cipherText:j['cipherText'],mac:j['mac']);
-  MeshEnvelope forwarded(String node) => MeshEnvelope(id:id,from:from,to:to,createdAt:createdAt,ttl:ttl-1,path:[...path,node],nonce:nonce,cipherText:cipherText,mac:mac);
+  MeshEnvelope({required this.id, required this.ttl, required this.nonce, required this.cipherText, required this.mac});
+  final String id, nonce, cipherText, mac;
+  final int ttl;
+  Map<String, dynamic> toJson() => {'v':1,'id':id,'ttl':ttl,'nonce':nonce,'cipherText':cipherText,'mac':mac};
+  factory MeshEnvelope.fromJson(Map<String,dynamic> j) => MeshEnvelope(id:j['id'],ttl:j['ttl'],nonce:j['nonce'],cipherText:j['cipherText'],mac:j['mac']);
+  MeshEnvelope forwarded() => MeshEnvelope(id:id,ttl:ttl-1,nonce:nonce,cipherText:cipherText,mac:mac);
 }
 
 class MeshEngine {
@@ -57,7 +56,7 @@ class MeshEngine {
     final prefs = await SharedPreferences.getInstance();
     nodeId = prefs.getString('mesh.node') ?? _uuid.v4();
     await prefs.setString('mesh.node', nodeId);
-    _nearby = NearbyService(localDisplayName:'MESHBIT', localPeerId:nodeId);
+    _nearby = NearbyService(localDisplayName:'MESHBIT', localPeerId:_uuid.v4());
     _initialized = true;
     final dbPath = p.join(await getDatabasesPath(), 'meshbit_mesh.db');
     _db = await openDatabase(dbPath, version:1, onCreate:(db,_) async {
@@ -132,8 +131,10 @@ class MeshEngine {
     final key = _parseKey(keyHex);
     if (key == null) throw Exception('La clave debe tener exactamente 64 caracteres hexadecimales.');
     if (destination.trim().isEmpty) throw Exception('Falta el ID del destinatario.');
-    final box = await _aes.encrypt(utf8.encode(text), secretKey:SecretKey(key));
-    final envelope = MeshEnvelope(id:_uuid.v4(),from:nodeId,to:destination.trim(),createdAt:DateTime.now().millisecondsSinceEpoch,ttl:12,path:[nodeId],nonce:base64Encode(box.nonce),cipherText:base64Encode(box.cipherText),mac:base64Encode(box.mac.bytes));
+    final inner = jsonEncode({'from':nodeId,'to':destination.trim(),'text':text,'createdAt':DateTime.now().millisecondsSinceEpoch});
+    final box = await _aes.encrypt(utf8.encode(inner), secretKey:SecretKey(key));
+    final envelope = MeshEnvelope(id:_uuid.v4(),ttl:12,nonce:base64Encode(box.nonce),cipherText:base64Encode(box.cipherText),mac:base64Encode(box.mac.bytes));
+    _seen.add(envelope.id);
     await _store(envelope);
     await _broadcast(envelope);
     onStatus('Mensaje cifrado guardado y enviado a la red. Se reenviará si aparece otra ruta.');
@@ -143,15 +144,12 @@ class MeshEngine {
     try {
       final map = jsonDecode(utf8.decode(bytes)) as Map<String,dynamic>;
       final env = MeshEnvelope.fromJson(map);
-      if (_seen.contains(env.id) || env.path.contains(nodeId) || env.ttl < 0) return;
+      if (_seen.contains(env.id) || env.ttl < 0) return;
       _seen.add(env.id);
-      await _store(env);
-      if (env.to == nodeId) {
-        onMessage(env);
-        await _db!.update('packets', {'delivered':1}, where:'id=?',[env.id]);
-      } else if (env.ttl > 0) {
-        await _broadcast(env.forwarded(nodeId));
-      }
+      final forwarded = env.ttl > 0 ? env.forwarded() : env;
+      await _store(forwarded);
+      onMessage(forwarded);
+      if (env.ttl > 0) await _broadcast(forwarded);
     } catch (_) { onStatus('Se descartó un paquete local inválido.'); }
   }
 
@@ -159,11 +157,14 @@ class MeshEngine {
     final key = _parseKey(keyHex);
     if (key == null) throw Exception('La clave debe tener exactamente 64 caracteres hexadecimales.');
     final clear = await _aes.decrypt(SecretBox(base64Decode(env.cipherText), nonce:base64Decode(env.nonce), mac:Mac(base64Decode(env.mac))), secretKey:SecretKey(key));
-    return utf8.decode(clear);
+    final decoded = jsonDecode(utf8.decode(clear)) as Map<String,dynamic>;
+    if (decoded['to'] != nodeId) throw Exception('Este paquete no está dirigido a este dispositivo.');
+    await _db!.update('packets', {'delivered':1}, where:'id=?', whereArgs:[env.id]);
+    return decoded['from'].toString() + ': ' + decoded['text'].toString();
   }
 
   Future<void> _store(MeshEnvelope env) async {
-    await _db!.insert('packets', {'id':env.id,'json':jsonEncode(env.toJson()),'created':env.createdAt}, conflictAlgorithm:ConflictAlgorithm.ignore);
+    await _db!.insert('packets', {'id':env.id,'json':jsonEncode(env.toJson()),'created':DateTime.now().millisecondsSinceEpoch}, conflictAlgorithm:ConflictAlgorithm.ignore);
   }
   Future<void> _broadcast(MeshEnvelope env) async {
     if (_peers.isEmpty) { onStatus('Sin vecinos conectados: mensaje guardado para retransmitir más tarde.'); return; }
@@ -174,11 +175,7 @@ class MeshEngine {
     for (final row in rows) {
       try {
         final env = MeshEnvelope.fromJson(jsonDecode(row['json'] as String));
-        if (env.from == nodeId) {
-          await _broadcast(env);
-        } else if (!env.path.contains(nodeId) && env.ttl > 0) {
-          await _broadcast(env.forwarded(nodeId));
-        }
+        if (env.ttl >= 0) await _broadcast(env);
       } catch (_) {}
     }
   }
@@ -240,15 +237,15 @@ ${engine.nodeId.isEmpty?'Se genera al iniciar':engine.nodeId}',style:const TextS
       const SizedBox(height:8),TextField(controller:body,minLines:2,maxLines:4,decoration:const InputDecoration(labelText:'Mensaje',border:OutlineInputBorder())),
       const SizedBox(height:12),FilledButton.icon(onPressed:busy?null:()async{setState(()=>busy=true);try{await engine.sendText(destination.text,body.text,key.text);body.clear();notice('Mensaje guardado en la cola mesh.');}catch(e){notice(e.toString());}finally{if(mounted)setState(()=>busy=false);}},icon:const Icon(Icons.send),label:const Text('ENVIAR POR MESH')),
       if(lastEnvelope != null) Padding(padding:const EdgeInsets.only(top:18),child:Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(0xff202b23),borderRadius:BorderRadius.circular(12)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        const Text('PAQUETE PARA ESTE DISPOSITIVO',style:TextStyle(color:Color(0xffa8c5ac),fontSize:11,letterSpacing:1.5)),
-        Text('De: ${lastEnvelope!.from}',style:const TextStyle(fontSize:12)),
+        const Text('PAQUETE CIFRADO RECIBIDO',style:TextStyle(color:Color(0xffa8c5ac),fontSize:11,letterSpacing:1.5)),
+        Text('ID de paquete: ${lastEnvelope!.id}',style:const TextStyle(fontSize:12)),
         const SizedBox(height:8),
         TextField(controller:key,decoration:const InputDecoration(labelText:'Clave de conversación',border:OutlineInputBorder()),obscureText:true),
         const SizedBox(height:8),
         FilledButton(onPressed:()async{try{final clear=await engine.decryptMessage(lastEnvelope!,key.text);setState(()=>decrypted=clear);}catch(e){notice('No se pudo descifrar: clave incorrecta o paquete alterado.');}},child:const Text('DESCIFRAR MENSAJE')),
         if(decrypted.isNotEmpty) Padding(padding:const EdgeInsets.only(top:10),child:Text(decrypted,style:const TextStyle(fontSize:16)))
       ]))),
-      const SizedBox(height:20),const Text('La retransmisión usa paquetes cifrados, TTL de 12 saltos y deduplicación por ID. Los nodos intermedios almacenan y reenvían el paquete sin descifrarlo. Para leer un mensaje, emisor y destinatario deben compartir la misma clave de conversación por un canal seguro.',style:TextStyle(color:Colors.white54,fontSize:12,height:1.5))
+      const SizedBox(height:20),const Text('La retransmisión usa paquetes cifrados, TTL de 12 saltos y deduplicación por ID. Los nodos intermedios almacenan y reenvían el paquete sin descifrarlo. Los IDs de emisor y destinatario van dentro del cifrado. Los relays solo ven un ID aleatorio, TTL y ciphertext. Emisor y destinatario deben compartir la clave por un canal seguro.',style:TextStyle(color:Colors.white54,fontSize:12,height:1.5))
     ]),
   );
 }
