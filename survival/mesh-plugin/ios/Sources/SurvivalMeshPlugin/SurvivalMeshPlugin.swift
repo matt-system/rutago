@@ -58,7 +58,7 @@ public class SurvivalMeshPlugin: CAPPlugin, CAPBridgedPlugin, CBCentralManagerDe
                 target.writeValue(data, for: characteristic, type: .withResponse); sent += 1
             }
         }
-        if tx != nil && !subscribed.isEmpty && data.count <= peripheralManager.maximumUpdateValueLength {
+        if tx != nil && !subscribed.isEmpty {
             let ok = peripheralManager.updateValue(data, for: tx, onSubscribedCentrals: nil)
             if ok { sent += subscribed.count }
         }
