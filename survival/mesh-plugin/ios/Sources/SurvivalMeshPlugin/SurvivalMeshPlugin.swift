@@ -27,8 +27,8 @@ public class SurvivalMeshPlugin: CAPPlugin, CAPBridgedPlugin, CBCentralManagerDe
     private var started = false
 
     public override func load() {
-        central = CBCentralManager(delegate: self, queue: nil, options: [CBCentralManagerOptionRestoreIdentifierKey: "cl.survival.mesh.central"])
-        peripheralManager = CBPeripheralManager(delegate: self, queue: nil, options: [CBPeripheralManagerOptionRestoreIdentifierKey: "cl.survival.mesh.peripheral"])
+        central = CBCentralManager(delegate: self, queue: nil, options: nil)
+        peripheralManager = CBPeripheralManager(delegate: self, queue: nil, options: nil)
     }
     @objc public func start(_ call: CAPPluginCall) {
         deviceName = call.getString("deviceName") ?? "SURVIVAL"
@@ -54,8 +54,8 @@ public class SurvivalMeshPlugin: CAPPlugin, CAPBridgedPlugin, CBCentralManagerDe
         var sent = 0
         for (id, characteristic) in characteristics {
             if let target = peers[id], target.state == .connected {
-                guard data.count <= target.maximumWriteValueLength(for: .withoutResponse) else { continue }
-                target.writeValue(data, for: characteristic, type: .withoutResponse); sent += 1
+                guard data.count <= target.maximumWriteValueLength(for: .withResponse) else { continue }
+                target.writeValue(data, for: characteristic, type: .withResponse); sent += 1
             }
         }
         if tx != nil && !subscribed.isEmpty && data.count <= peripheralManager.maximumUpdateValueLength {
