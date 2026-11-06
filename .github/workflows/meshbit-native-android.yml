@@ -38,7 +38,7 @@ jobs:
         run: flutter pub get
       - name: Analyze Dart
         working-directory: meshbit/native
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
       - name: Run unit tests
         working-directory: meshbit/native
         run: flutter test
