@@ -19,7 +19,9 @@
     "react-native": "0.81.4",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
-    "@unomed/react-native-matrix-sdk": "0.10.2"
+    "expo-crypto": "~14.1.5",
+    "tweetnacl": "^1.0.3",
+    "base64-js": "^1.5.1"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
