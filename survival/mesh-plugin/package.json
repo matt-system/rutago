@@ -14,7 +14,7 @@
     }
   },
   "files": [
-    "dist",
+    "src",
     "ios",
     "android",
     "SurvivalMesh.podspec"
