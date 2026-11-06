@@ -15,6 +15,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() => runApp(const MeshbitApp());
 
@@ -69,7 +70,15 @@ class MeshEnvelope {
   );
 }
 
+class MeshChatMessage {
+  const MeshChatMessage({required this.id,required this.senderId,required this.senderAlias,required this.text,required this.createdAt,required this.isMine});
+  final String id, senderId, senderAlias, text;
+  final DateTime createdAt;
+  final bool isMine;
+}
+
 class MeshEngine {
+  static const publicChannelId = 'mesh:general';
   MeshEngine(this.onStatus, this.onMessage, this.onPeers);
   final void Function(String) onStatus;
   final void Function(MeshEnvelope) onMessage;
@@ -77,6 +86,7 @@ class MeshEngine {
   late final NearbyService _nearby;
   final _uuid = const Uuid();
   final _aes = AesGcm.with256bits();
+  final _secureStorage = const FlutterSecureStorage();
   final _peers = <String, Peer>{};
   final _seen = <String>{};
   final _trustedPeers = <String>{};
@@ -226,14 +236,14 @@ class MeshEngine {
     await _flush();
   }
 
-  Future<void> sendText(String destination, String text, String keyHex) async {
+  Future<void> sendText(String destination, String text, String keyHex, {String senderAlias = 'mesh-user'}) async {
     final key = _parseKey(keyHex);
     if (key == null) throw Exception('La clave debe tener exactamente 64 caracteres hexadecimales.');
     if (destination.trim().isEmpty) throw Exception('Falta el ID del destinatario.');
     if (text.trim().isEmpty) throw Exception('Escribe un mensaje antes de enviarlo.');
     if (utf8.encode(text).length > 4096) throw Exception('El mensaje supera el límite de 4 KB.');
     final packetId = _uuid.v4();
-    final inner = jsonEncode({'id':packetId,'from':nodeId,'to':destination.trim(),'text':text,'createdAt':DateTime.now().millisecondsSinceEpoch});
+    final inner = jsonEncode({'v':1,'kind':'text','id':packetId,'from':nodeId,'alias':senderAlias.trim().isEmpty?'mesh-user':senderAlias.trim(),'to':destination.trim(),'text':text,'createdAt':DateTime.now().millisecondsSinceEpoch});
     final box = await _aes.encrypt(utf8.encode(inner), secretKey:SecretKey(key));
     final envelope = MeshEnvelope(id:packetId,ttl:12,nonce:base64Encode(box.nonce),cipherText:base64Encode(box.cipherText),mac:base64Encode(box.mac.bytes));
     _seen.add(envelope.id);
@@ -267,15 +277,84 @@ class MeshEngine {
     } catch (_) { onStatus('Se descartó un paquete local inválido.'); }
   }
 
-  Future<String> decryptMessage(MeshEnvelope env, String keyHex) async {
+  Future<MeshChatMessage?> decryptPacket(MeshEnvelope env, String keyHex, String conversationId) async {
     final key = _parseKey(keyHex);
     if (key == null) throw Exception('La clave debe tener exactamente 64 caracteres hexadecimales.');
-    final clear = await _aes.decrypt(SecretBox(base64Decode(env.cipherText), nonce:base64Decode(env.nonce), mac:Mac(base64Decode(env.mac))), secretKey:SecretKey(key));
+    final clear = await _aes.decrypt(
+      SecretBox(base64Decode(env.cipherText), nonce:base64Decode(env.nonce), mac:Mac(base64Decode(env.mac))),
+      secretKey:SecretKey(key),
+    );
     final decoded = jsonDecode(utf8.decode(clear)) as Map<String,dynamic>;
-    if (decoded['to'] != nodeId) throw Exception('Este paquete no está dirigido a este dispositivo.');
-    if (decoded['id'] != env.id) throw Exception('El identificador del paquete no coincide con el contenido cifrado.');
-    await _db!.update('packets', {'delivered':1}, where:'id=?', whereArgs:[env.id]);
-    return '${decoded['from']}: ${decoded['text']}';
+    if (decoded['v'] != 1 || decoded['kind'] != 'text' || decoded['id'] != env.id) {
+      throw const FormatException('Mensaje MESH inválido.');
+    }
+    final from = decoded['from']?.toString() ?? '';
+    final to = decoded['to']?.toString() ?? '';
+    final isMine = from == nodeId;
+    final isPublic = conversationId == publicChannelId && to == publicChannelId;
+    final isDirect = conversationId != publicChannelId &&
+      ((isMine && to == conversationId) || (!isMine && from == conversationId && to == nodeId));
+    if (!isPublic && !isDirect) return null;
+    if (!isMine && (to == nodeId || isPublic)) {
+      await _db!.update('packets', {'delivered':1}, where:'id=?', whereArgs:[env.id]);
+    }
+    final stamp = decoded['createdAt'];
+    return MeshChatMessage(
+      id:env.id,
+      senderId:from,
+      senderAlias:(decoded['alias']?.toString().trim().isNotEmpty ?? false) ? decoded['alias'].toString() : from,
+      text:decoded['text']?.toString() ?? '',
+      createdAt:DateTime.fromMillisecondsSinceEpoch(stamp is int ? stamp : DateTime.now().millisecondsSinceEpoch),
+      isMine:isMine,
+    );
+  }
+
+  Future<List<MeshChatMessage>> loadConversation(String conversationId, String keyHex) async {
+    await init();
+    final rows = await _db!.query('packets', orderBy:'created ASC', limit:500);
+    final messages = <MeshChatMessage>[];
+    for (final row in rows) {
+      try {
+        final env = MeshEnvelope.fromJson(jsonDecode(row['json'] as String) as Map<String,dynamic>);
+        final message = await decryptPacket(env, keyHex, conversationId);
+        if (message != null) messages.add(message);
+      } catch (_) {}
+    }
+    messages.sort((a,b)=>a.createdAt.compareTo(b.createdAt));
+    return messages;
+  }
+
+  Future<String> getOrCreatePublicChannelKey() async {
+    const storageKey = 'meshbit.channel.general.key.v1';
+    final existing = await _secureStorage.read(key:storageKey);
+    if (existing != null && _parseKey(existing) != null) return existing;
+    final generated = generateKey();
+    await _secureStorage.write(key:storageKey, value:generated);
+    return generated;
+  }
+
+  Future<void> savePublicChannelKey(String value) async {
+    if (_parseKey(value) == null) throw Exception('La clave debe tener 64 caracteres hexadecimales.');
+    await _secureStorage.write(key:'meshbit.channel.general.key.v1', value:value.trim().toLowerCase());
+  }
+
+  Future<void> saveContactKey(String peerId, String value) async {
+    if (_parseKey(value) == null) throw Exception('La clave privada debe tener 64 caracteres hexadecimales.');
+    await _secureStorage.write(key:'meshbit.contact.$peerId.key.v1', value:value.trim().toLowerCase());
+  }
+
+  Future<String?> loadContactKey(String peerId) => _secureStorage.read(key:'meshbit.contact.$peerId.key.v1');
+
+  Future<void> deleteContactKey(String peerId) => _secureStorage.delete(key:'meshbit.contact.$peerId.key.v1');
+
+  Future<void> saveAlias(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('mesh.alias', value.trim().isEmpty ? 'mesh-user' : value.trim().substring(0, min(value.trim().length,24)));
+  }
+
+  Future<String> loadAlias() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('mesh.alias') ?? 'mesh-user';
   }
 
   Future<void> _store(MeshEnvelope env, {bool originated = false}) async {
