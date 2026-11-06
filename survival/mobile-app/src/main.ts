@@ -10,7 +10,7 @@ localStorage.setItem('survival-mesh-device',device);
 let guides:Guide[]=[],history:{q:string,a:string}[]=read('survival-assistant-history-v1',[]),messages:Msg[]=read('survival-mesh-messages-v2',[]),seen=new Set<string>(read('survival-mesh-seen-v2',[])),running=false;
 const fragments=new Map<string,{parts:string[];total:number}>();
 function esc(s:string){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))}
-function cleanText(s:string){return s.replaceAll(String.raw`\\n`,'\n').replaceAll(String.raw`\\r`,'\r')}
+function cleanText(s:string){return s.replaceAll(String.raw`\n`,'\n').replaceAll(String.raw`\r`,'\r')}
 function status(a:string,b=''){$('#status').textContent=a;$('#detail').textContent=b}
 function tab(which:'assistant'|'mesh'){document.querySelectorAll<HTMLElement>('[data-tab]').forEach(x=>x.classList.toggle('active',(x as HTMLElement).dataset.tab===which));$('#assistant').hidden=which!=='assistant';$('#mesh').hidden=which!=='mesh';$('#pageTitle').textContent=which==='assistant'?'Asistente IA':'Chat cercano';if(which==='mesh')renderChat()}
 function answer(q:string){
