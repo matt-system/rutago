@@ -1,0 +1,19 @@
+{
+  "name": "Meshbit — Mensajería privada",
+  "short_name": "Meshbit",
+  "description": "Mensajería privada cifrada",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080b0a",
+  "theme_color": "#080b0a",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
