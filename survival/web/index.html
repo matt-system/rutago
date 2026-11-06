@@ -216,7 +216,8 @@ function sendMeshAlert(){saveMesh("ALERTA DE EMERGENCIA. Necesito asistencia. Es
 function clearMeshLog(){if(confirm("¿Borrar el historial local de este dispositivo?")){localStorage.removeItem("survival-mesh-log");renderMesh()}}
 async function startMeshDiscovery(){const state=document.getElementById("meshState");state.textContent="● BLE NO DISPONIBLE EN WEB";document.getElementById("meshInfo").textContent="Para descubrir iPhone y Android cercanos se necesita la app nativa SURVIVAL con Bluetooth Low Energy. Esta página Cloudflare no tiene acceso a la radio BLE del sistema.";alert("El navegador web no permite implementar un chat BLE universal iPhone ↔ Android. La app nativa debe gestionar el escaneo y la conexión.");}
 const _go=go;go=function(page){_go(page);if(page==="mesh")renderMesh()};
-\nfunction net(){let on=navigator.onLine;document.getElementById("onlineText").textContent=on?"● En línea":"● Sin conexión";document.getElementById("netLabel").textContent=on?"Conectividad disponible":"Modo sin conexión";document.getElementById("sysNetwork").textContent=on?"Conectado a Internet":"Sin conexión a Internet"}
+
+function net(){let on=navigator.onLine;document.getElementById("onlineText").textContent=on?"● En línea":"● Sin conexión";document.getElementById("netLabel").textContent=on?"Conectividad disponible":"Modo sin conexión";document.getElementById("sysNetwork").textContent=on?"Conectado a Internet":"Sin conexión a Internet"}
 document.querySelectorAll("[data-check]").forEach(el=>{el.checked=localStorage.getItem("survival-check-"+el.dataset.check)==="1";el.addEventListener("change",()=>localStorage.setItem("survival-check-"+el.dataset.check,el.checked?"1":"0"))});
 window.addEventListener("online",net);window.addEventListener("offline",net);net();renderNotes();renderMesh();loadKnowledge();checkLocal();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
