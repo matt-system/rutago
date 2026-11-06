@@ -67,6 +67,9 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: survival/mobile-app/package.json
+      - name: Install BLE plugin dependencies
+        working-directory: survival/mobile-app
+        run: npm install --prefix ../mesh-plugin
       - name: Install dependencies
         working-directory: survival/mobile-app
         run: npm install
