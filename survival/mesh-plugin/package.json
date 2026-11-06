@@ -1,0 +1,11 @@
+{
+  "name": "@survival/mesh",
+  "version": "0.1.0",
+  "description": "Native BLE transport for SURVIVAL offline mesh chat",
+  "main": "dist/plugin.cjs.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "capacitor": { "ios": { "src": "ios" }, "android": { "src": "android" } },
+  "files": ["dist", "ios", "android", "SurvivalMesh.podspec"],
+  "peerDependencies": { "@capacitor/core": "^7.0.0" }
+}
