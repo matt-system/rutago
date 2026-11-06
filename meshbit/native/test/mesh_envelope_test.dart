@@ -9,14 +9,18 @@ void main() {
     expect(key.length, 64);
   });
 
-  test('mesh envelope preserves relay metadata and ciphertext', () {
-    final envelope = MeshEnvelope(id:'id-1',ttl:12,nonce:'n',cipherText:'opaque-ciphertext',mac:'auth-tag');
+  test('mesh envelope preserves opaque ciphertext and decrements hop limit', () {
+    final envelope = MeshEnvelope(id:'00000000-0000-4000-8000-000000000001',ttl:12,nonce:base64Encode(List<int>.filled(12,0)),cipherText:base64Encode(utf8.encode('opaque-ciphertext')),mac:base64Encode(List<int>.filled(16,1)));
     final decoded = MeshEnvelope.fromJson(jsonDecode(jsonEncode(envelope.toJson())));
     final forwarded = decoded.forwarded();
-    expect(forwarded.id, 'id-1');
+    expect(forwarded.id, '00000000-0000-4000-8000-000000000001');
     expect(forwarded.ttl, 11);
-    expect(forwarded.cipherText, 'opaque-ciphertext');
+    expect(base64Decode(forwarded.cipherText), utf8.encode('opaque-ciphertext'));
     expect(forwarded.toJson().containsKey('from'), isFalse);
     expect(forwarded.toJson().containsKey('to'), isFalse);
+  });
+
+  test('mesh envelope rejects invalid hop limits', () {
+    expect(() => MeshEnvelope.fromJson({'v':1,'id':'00000000-0000-4000-8000-000000000001','ttl':13,'nonce':base64Encode(List<int>.filled(12,0)),'cipherText':'','mac':base64Encode(List<int>.filled(16,1))}), throwsFormatException);
   });
 }
