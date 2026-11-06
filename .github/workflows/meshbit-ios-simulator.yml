@@ -24,6 +24,10 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Typecheck encrypted messaging client
+        run: npm run typecheck
+      - name: Test encryption primitives
+        run: npm run test:crypto
       - name: Generate native iOS project
         run: npx expo prebuild --platform ios --non-interactive
       - name: Build for iOS Simulator (no Apple signing)
