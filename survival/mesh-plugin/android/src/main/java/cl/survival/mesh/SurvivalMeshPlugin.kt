@@ -39,6 +39,7 @@ class SurvivalMeshPlugin : Plugin() {
     private val clients = ConcurrentHashMap<String, BluetoothGatt>()
     private val rxChars = ConcurrentHashMap<String, BluetoothGattCharacteristic>()
     private val txChars = ConcurrentHashMap<String, BluetoothGattCharacteristic>()
+    private val connectedClientIds = ConcurrentHashMap.newKeySet<String>()
     private val connectedServers = ConcurrentHashMap<String, BluetoothDevice>()
     private val connectedClientIds = ConcurrentHashMap.newKeySet<String>()
     private var txServer: BluetoothGattCharacteristic? = null
