@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10251e">
+<title>Descargar SURVIVAL</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1713;--panel:#13251e;--line:#294238;--text:#edf4ee;--muted:#a9b9af;--green:#a8d5ad;--accent:#d8efdc}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% 0%,#1c3a2d 0,#0b1713 58%);font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text);min-height:100vh;padding:28px 16px}
+main{max-width:760px;margin:auto}.brand{display:flex;align-items:center;gap:12px;margin:12px 0 42px}.mark{width:46px;height:46px;border:1px solid #5c876a;border-radius:14px;display:grid;place-items:center;color:var(--green);font-size:25px;background:#183126}.brand strong{letter-spacing:.16em;font-size:14px}.brand small{display:block;color:var(--muted);letter-spacing:.12em;font-size:10px}
+h1{font-size:clamp(34px,7vw,56px);line-height:1.04;letter-spacing:-.045em;margin:0 0 16px}p{color:var(--muted);margin:0 0 22px}.eyebrow{color:var(--green);font-size:12px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:12px}
+.card{background:linear-gradient(145deg,#172c23,#102019);border:1px solid var(--line);border-radius:22px;padding:24px;margin:18px 0}.card h2{margin:0 0 8px;font-size:21px}.card p{font-size:14px;margin-bottom:18px}.button{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:12px;background:var(--accent);color:#10251a;font-weight:750;text-decoration:none}.button.secondary{background:#243b30;color:#e4f1e7;border:1px solid #456451}.meta{font-size:12px;color:#9fb3a5;margin-top:12px}.status{display:inline-block;border:1px solid #526e5b;color:#c4e6c9;border-radius:99px;padding:4px 9px;font-size:11px;letter-spacing:.06em;margin-bottom:12px}.notice{border-left:3px solid #b7c98a;padding:12px 14px;background:#1a2a20;border-radius:0 10px 10px 0;color:#d5dfd1;font-size:13px;margin-top:18px}.steps{padding-left:20px;color:var(--muted);font-size:14px}.steps li{margin:7px 0}footer{margin:34px 0 12px;color:#80958a;font-size:12px;text-align:center}a.text{color:var(--green)}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand"><div class="mark">✳</div><div><strong>SURVIVAL</strong><small>PREPARACIÓN · CONEXIÓN · RESILIENCIA</small></div></div>
+  <div class="eyebrow">Centro oficial de instalación</div>
+  <h1>Prepara tu teléfono.<br>Incluso sin señal.</h1>
+  <p>Descarga la aplicación SURVIVAL y revisa las instrucciones antes de usarla en una emergencia.</p>
+
+  <section class="card">
+    <span class="status">ANDROID · BUILD DE PRUEBA</span>
+    <h2>Instalar en Android</h2>
+    <p>Descarga el paquete de instalación generado para esta versión. GitHub entrega el APK dentro de un archivo ZIP.</p>
+    <a class="button" href="https://github.com/matt-system/rutago/actions/runs/42153944376#artifacts" target="_blank" rel="noopener">Descargar SURVIVAL para Android ↗</a>
+    <div class="meta">Archivo: survival-android-debug · APK de depuración · versión BLE fragmentada</div>
+    <ol class="steps">
+      <li>Abre el enlace y descarga el artefacto <b>survival-android-debug</b> (ZIP).</li>
+      <li>Descomprime el ZIP y abre <b>app-debug.apk</b>.</li>
+      <li>Si Android lo solicita, autoriza temporalmente la instalación desde esa fuente.</li>
+      <li>Abre SURVIVAL y concede los permisos Bluetooth cuando los pida.</li>
+    </ol>
+    <div class="notice">Esta es una compilación de prueba, no una versión certificada para emergencias. La comunicación BLE todavía debe probarse entre teléfonos físicos, sin Wi-Fi ni datos móviles.</div>
+  </section>
+
+  <section class="card">
+    <span class="status">IPHONE · DISTRIBUCIÓN PENDIENTE</span>
+    <h2>Instalar en iPhone</h2>
+    <p>La compilación iOS actual pasó la compilación para simulador, pero no es un archivo instalable en un iPhone real. Para distribuirla necesitamos firmarla y publicarla mediante TestFlight o un canal autorizado de Apple.</p>
+    <span class="button secondary" aria-disabled="true">Próximamente para iPhone</span>
+    <div class="meta">No descargues perfiles ni archivos IPA de terceros que prometan instalar esta versión.</div>
+  </section>
+
+  <section class="card">
+    <h2>¿Quieres revisar SURVIVAL ahora?</h2>
+    <p>La versión web permite consultar la interfaz y parte de la biblioteca. El chat BLE nativo requiere instalar la aplicación Android/iOS; no funciona desde el navegador.</p>
+    <a class="button secondary" href="https://survival-eg9.pages.dev/">Abrir SURVIVAL web ↗</a>
+  </section>
+  <footer>SURVIVAL · Proyecto independiente · No modifica RutaGo</footer>
+</main>
+</body>
+</html>
